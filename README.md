@@ -37,6 +37,23 @@ make dev                      # http://127.0.0.1:5555/login
 
 That is the development setup. On the office Mac launchd keeps the web app and the worker running instead (`make plists`, `make start`): see [docs/operations.md](docs/operations.md).
 
+### Run it locally
+
+The app is two processes, so use two terminals:
+
+```sh
+# Terminal 1: the dashboard at http://127.0.0.1:5555/login
+make dev
+
+# Terminal 2: the background worker (stop either one with Ctrl-C)
+uv run salesfinder worker --no-send
+```
+
+- **Start the worker with `--no-send` while you try things out.** It does everything except send email. Sending also ships paused, and nothing is sent without a configured mailbox and a teammate's approval. Without the worker nothing happens in the background: no HubSpot sync, no approved searches, no profiling, no drafting and no mail reading. See [Worker, HubSpot and discovery](#worker-hubspot-and-discovery).
+- **The worker drafts with your real Claude subscription** through the logged-in `claude` CLI, as soon as an active campaign has companies to write to. Leave it stopped if you don't want that yet. Quiet hours (default 22:00–07:00 New York time) hold the Claude steps.
+- **Some features need keys in `.env`.** Without `SALESFINDER_SERPER_API_KEY` you can't search for companies. Without `SALESFINDER_HUBSPOT_TOKEN` cold sending stays paused. `salesfinder doctor` flags both, and the app still runs.
+- **To check the worker:** `uv run salesfinder runs` shows its health and recent passes. `uv run salesfinder worker --once --no-send` runs a single pass and exits.
+
 Account recovery and deactivation from the command line:
 
 ```sh
