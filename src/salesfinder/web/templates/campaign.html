@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ campaign.name }}{% endblock %}
+{% block content %}
+<p><a href="/campaigns">← All campaigns</a></p>
+<section class="card">
+  <h1 class="break">{{ campaign.name }}</h1>
+  {% if flash %}<p class="alert alert-success" role="status">{{ flash }}</p>{% endif %}
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  <dl class="stats">
+    <div><dt>Status</dt><dd class="campaign-status">{{ status_label }}</dd></div>
+    <div><dt>Drafted today / cap</dt><dd>{{ drafted_today }} / {{ campaign.daily_draft_cap }}</dd></div>
+    <div><dt>Ready to approve</dt><dd>{{ ready }}</dd></div>
+    <div><dt>Held by the gate</dt><dd>{{ held }}</dd></div>
+  </dl>
+  <dl class="facts">
+    <dt>Side</dt><dd>{{ side_label }} <span class="muted">· {{ campaign.playbook }} playbook</span></dd>
+    <dt>Cohort</dt><dd>{% if cohort %}<a href="/cohorts/{{ cohort.id }}" class="break">{{ cohort.name }}</a>{% else %}—{% endif %}<div class="muted small cohort-summary">{{ cohort_summary }}</div></dd>
+    <dt>Sending mailbox</dt><dd>
+      {% set current = mailboxes|selectattr("id", "equalto", campaign.mailbox_id)|first %}
+      {% if campaign.status == "archived" %}{{ current.address if current else "—" }}
+      {% else %}
+      <form method="post" action="/campaigns/{{ campaign.id }}/mailbox" class="row-form campaign-mailbox">
+        <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+        <select name="mailbox_id" aria-label="Sending mailbox" required>
+          <option value="">Choose a mailbox…</option>
+          {% for m in mailboxes %}
+          <option value="{{ m.id }}"{% if m.id == campaign.mailbox_id %} selected{% endif %}>{{ m.address }}{% if not m.enabled %} (disabled){% endif %}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="button button-secondary">Save</button>
+      </form>
+      {% if not mailboxes %}<div class="muted small">No {{ side_label|lower }} mailboxes yet.{% if auth.is_admin %} <a href="/admin/mailboxes/new">Add one.</a>{% endif %}</div>{% endif %}
+      {% endif %}
+    </dd>
+    <dt>Created by</dt><dd>{{ creator or "—" }} <span class="muted">· {{ campaign.created_at|utc }}</span></dd>
+    <dt>First activated</dt><dd>{{ campaign.activated_at|utc }}</dd>
+    <dt>Last error</dt><dd class="break last-error">{{ campaign.last_error or "—" }}</dd>
+  </dl>
+  {% if campaign.status != "archived" %}
+    {% if problems %}
+    <div class="alert alert-warn activation-problems" role="status">
+      <p>{% if campaign.status == "active" %}Drafting is blocked until this is fixed:{% else %}Can't activate yet:{% endif %}</p>
+      <ul class="reasons">{% for p in problems %}<li>{{ p }}</li>{% endfor %}</ul>
+    </div>
+    {% elif campaign.status in ("draft", "paused") %}
+    <p class="muted">Ready to activate.</p>
+    {% endif %}
+  {% else %}
+  <p class="muted">Archived: this campaign never drafts again. Its unsent emails were cancelled and its sequences stopped, so their addresses are free for other campaigns.</p>
+  {% endif %}
+  {% if campaign.status == "paused" %}
+  <p class="muted">Paused: no new drafts. Its waiting emails can still be approved; nothing cold is sent while it is paused (approved answers to replies still go).</p>
+  {% endif %}
+  <div class="actions">
+    {% for action in buttons %}
+    <form method="post" action="/campaigns/{{ campaign.id }}/{{ action }}" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+      <button type="submit" class="button{% if action == 'archive' %} button-danger{% elif action == 'pause' %} button-secondary{% endif %}">{{ action|capitalize }}</button>
+    </form>
+    {% endfor %}
+    {% if ready or held %}<a href="/outbox?campaign={{ campaign.id }}">Open in the Outbox</a>{% endif %}
+  </div>
+</section>
+{% endblock %}

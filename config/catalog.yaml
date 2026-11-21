@@ -1,0 +1,140 @@
+# Elchemy product catalog (team-maintained). Every product starts unconfirmed.
+products:
+  - id: sles
+    name: "Sodium Laureth Sulfate (SLES 70%)"
+    search_name: "sodium laureth sulfate"
+    synonyms: ["SLES", "sodium lauryl ether sulfate"]
+    inci: "Sodium Laureth Sulfate"
+    cas: ["68585-34-2", "9004-82-4"]
+    industries: [personal_care, home_care]
+    confirmed: false
+  - id: capb
+    name: "Cocamidopropyl Betaine (CAPB)"
+    search_name: "cocamidopropyl betaine"
+    synonyms: ["CAPB"]
+    inci: "Cocamidopropyl Betaine"
+    cas: ["61789-40-0"]
+    industries: [personal_care, home_care]
+    confirmed: false
+  - id: labsa
+    name: "Linear Alkylbenzene Sulfonic Acid (LABSA 96%)"
+    search_name: "LABSA"
+    synonyms: ["linear alkylbenzene sulfonic acid", "dodecylbenzenesulfonic acid"]
+    cas: ["27176-87-0", "85536-14-7"]
+    industries: [home_care]
+    confirmed: false
+  - id: np9
+    name: "Nonylphenol Ethoxylate 9 EO"
+    search_name: "nonylphenol ethoxylate"
+    cas: ["9016-45-9"]
+    industries: [home_care, oil_gas]
+    confirmed: false
+  - id: caustic_soda
+    name: "Caustic Soda (Sodium Hydroxide) Flakes / Prills"
+    search_name: "caustic soda"
+    synonyms: ["sodium hydroxide"]
+    cas: ["1310-73-2"]
+    industries: [home_care, water_treatment_mining, chemical_intermediates]
+    confirmed: false
+  - id: soda_ash
+    name: "Soda Ash (Sodium Carbonate)"
+    search_name: "soda ash"
+    synonyms: ["sodium carbonate"]
+    cas: ["497-19-8"]
+    industries: [home_care, water_treatment_mining]
+    confirmed: false
+  - id: koh
+    name: "Potassium Hydroxide"
+    search_name: "potassium hydroxide"
+    synonyms: ["KOH", "caustic potash"]
+    cas: ["1310-58-3"]
+    industries: [home_care, chemical_intermediates]
+    confirmed: false
+  - id: hcl
+    name: "Hydrochloric Acid"
+    search_name: "hydrochloric acid"
+    synonyms: ["HCl", "muriatic acid"]
+    cas: ["7647-01-0"]
+    industries: [water_treatment_mining, oil_gas, chemical_intermediates]
+    confirmed: false
+  - id: cetyl_alcohol
+    name: "Cetyl Alcohol"
+    search_name: "cetyl alcohol"
+    inci: "Cetyl Alcohol"
+    cas: ["36653-82-4"]
+    industries: [personal_care]
+    confirmed: false
+  - id: cetostearyl_alcohol
+    name: "Cetostearyl Alcohol"
+    search_name: "cetostearyl alcohol"
+    inci: "Cetearyl Alcohol"
+    cas: ["67762-27-0", "8005-44-5"]
+    industries: [personal_care]
+    confirmed: false
+  - id: glycerine
+    name: "Glycerine"
+    search_name: "glycerine"
+    synonyms: ["glycerin", "glycerol"]
+    inci: "Glycerin"
+    cas: ["56-81-5"]
+    industries: [personal_care, food_nutrition]
+    confirmed: false
+  - id: citric_acid
+    name: "Citric Acid"
+    search_name: "citric acid"
+    cas: ["77-92-9", "5949-29-1"]
+    industries: [food_nutrition, home_care]
+    confirmed: false
+  - id: polysorbate_80
+    name: "Polysorbate 80"
+    search_name: "polysorbate 80"
+    inci: "Polysorbate 80"
+    cas: ["9005-65-6"]
+    industries: [personal_care, food_nutrition]
+    confirmed: false
+  - id: polysorbate_20
+    name: "Polysorbate 20"
+    search_name: "polysorbate 20"
+    inci: "Polysorbate 20"
+    cas: ["9005-64-5"]
+    industries: [personal_care, flavours_fragrance]
+    confirmed: false
+  - id: silica
+    name: "Precipitated Silica"
+    search_name: "precipitated silica"
+    inci: "Silica"
+    cas: ["112926-00-8"]
+    industries: [case, personal_care]
+    confirmed: false
+  - id: xylene
+    name: "Xylene"
+    search_name: "xylene"
+    cas: ["1330-20-7"]
+    industries: [case, chemical_intermediates]
+    confirmed: false
+  - id: mineral_oil
+    name: "White Mineral Oil"
+    search_name: "white mineral oil"
+    inci: "Paraffinum Liquidum"
+    cas: ["8042-47-5"]
+    industries: [personal_care, case]
+    confirmed: false
+  - id: green_tea_extract
+    name: "Green Tea Extract"
+    search_name: "green tea extract"
+    inci: "Camellia Sinensis Leaf Extract"
+    cas: ["84650-60-2"]
+    industries: [food_nutrition, personal_care]
+    confirmed: false
+  - id: monk_fruit_extract
+    name: "Monk Fruit Extract"
+    search_name: "monk fruit extract"
+    cas: []
+    industries: [food_nutrition]
+    confirmed: false
+  - id: pepper_oleoresin
+    name: "Black Pepper Oleoresin"
+    search_name: "black pepper oleoresin"
+    cas: []
+    industries: [food_nutrition, flavours_fragrance]
+    confirmed: false

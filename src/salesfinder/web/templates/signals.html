@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Signals{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Signals</h1>
+  {% if flash %}<p class="alert alert-success" role="status">{{ flash }}</p>{% endif %}
+  <p class="muted">Profiling only reads a company's website for confirmed signals.</p>
+  <form method="post" action="/signals/confirm-free" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+    <button type="submit" class="button">Confirm all free signals</button>
+  </form>
+</section>
+
+{% for title, signals in groups %}
+<section class="card">
+  <h2>{{ title }}</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Signal</th><th>Cost</th><th>State</th><th>Companies observed</th><th>Change</th></tr></thead>
+      <tbody>
+      {% for s in signals %}
+        {% set current = states[s.code] %}
+        <tr data-code="{{ s.code }}">
+          <td><strong>{{ s.label }}</strong><div class="muted small">{{ s.description }}</div></td>
+          <td>{{ "Free" if s.cost == "free" else s.cost }}</td>
+          <td><span class="badge {% if current == 'confirmed' %}badge-ok{% elif current == 'rejected' %}badge-off{% endif %}">{{ state_labels[current] }}</span></td>
+          <td class="num">{{ counts[s.code] }}</td>
+          <td class="nowrap">
+            {% for value, label in state_choices if value != current %}
+            <form method="post" action="/signals/{{ s.code }}/state" class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+              <input type="hidden" name="state" value="{{ value }}">
+              <button type="submit" class="button button-secondary">{{ label }}</button>
+            </form>
+            {% endfor %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endfor %}
+{% endblock %}

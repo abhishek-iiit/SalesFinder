@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Cohorts{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Cohorts</h1>
+  {% if flash %}<p class="alert alert-success" role="status">{{ flash }}</p>{% endif %}
+  <p class="muted">A cohort is a saved filter over companies' latest signals. Counts are live: they change as companies are profiled and signals confirmed.</p>
+  <div class="actions">
+    <a class="button" href="/cohorts/new?side=buyer">New buyer cohort</a>
+    <a class="button button-secondary" href="/cohorts/new?side=supplier">New supplier cohort</a>
+  </div>
+</section>
+
+<section class="card">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Side</th><th>Companies</th><th>Created by</th><th>Updated</th></tr></thead>
+      <tbody>
+      {% for item in items %}
+        {% set c = item.cohort %}
+        <tr data-cohort="{{ c.name }}">
+          <td><a href="/cohorts/{{ c.id }}" class="break">{{ c.name }}</a><div class="muted small">{{ item.summary }}</div>{% for warning in item.warnings %}<div class="small warn stale-warning">{{ warning }}</div>{% endfor %}</td>
+          <td>{{ side_labels.get(c.side, c.side) }}</td>
+          <td class="num">{{ item.count if item.count is not none else "—" }}</td>
+          <td>{{ item.creator }}</td>
+          <td class="nowrap">{{ c.updated_at|utc }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="muted">No cohorts yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

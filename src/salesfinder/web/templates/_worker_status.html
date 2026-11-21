@@ -1,0 +1,11 @@
+{# The worker's health line (Today and Runs; these pages show it instead of the base banner).
+   Needs ``worker`` (WorkerHealth or None) and ``worker_line``. #}
+{% if worker is none %}
+<p class="muted worker-status">The worker's status couldn't be read just now.</p>
+{% elif worker.problem %}
+<p class="alert alert-error worker-banner" role="status">{{ worker.problem }}</p>
+{% elif worker.no_send %}
+<p class="worker-status"><span class="badge badge-warn">No send</span> {{ worker_line }}</p>
+{% else %}
+<p class="worker-status"><span class="badge badge-ok">OK</span> {{ worker_line }}</p>
+{% endif %}

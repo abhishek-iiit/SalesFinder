@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+"""Fake Claude CLI for tests (stdlib only; never the real CLI).
+
+``--help``: prints every required isolation flag except the one named in FAKE_CLAUDE_DROP
+(after sleeping FAKE_CLAUDE_HELP_SLEEP seconds, if set).
+
+``-p``: reads the prompt from stdin and replies from FAKE_CLAUDE_REPLIES, a JSON file mapping a
+marker substring -> reply (first marker found in the prompt, in file order, wins). A reply is
+printed as JSON, except these special keys:
+  {"exit": N}             print the prompt to stderr (like a CLI echoing input) and exit N
+  {"sleep": S}            spawn a ``sleep S`` grandchild, wait for it, then print the default
+  {"raw": T, "repeat": N} print T repeated N times (default 1) verbatim
+  "exit_after": N         (alongside a normal reply) print it, then exit N
+Default reply: {"type": "result", "is_error": false, "result": "{}"}.
+
+Every invocation is appended to FAKE_CLAUDE_LOG (JSON lines): mode, argv, cwd, its entries,
+pid, the CLAUDE*/PWD/OLDPWD environment and, for -p, the prompt.
+"""
+
+import json
+import os
+import subprocess
+import sys
+import time
+
+FLAGS = (
+    "--safe-mode",
+    "--setting-sources",
+    "--no-session-persistence",
+    "--disable-slash-commands",
+    "--strict-mcp-config",
+    "--tools",
+    "--output-format",
+)
+DEFAULT = {"type": "result", "is_error": False, "result": "{}"}
+
+
+def _log(entry):
+    path = os.environ.get("FAKE_CLAUDE_LOG")
+    if path:
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry) + "\n")
+
+
+def _pick(prompt):
+    path = os.environ.get("FAKE_CLAUDE_REPLIES")
+    if path and os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            replies = json.load(f)
+        for marker, reply in replies.items():
+            if marker in prompt:
+                return reply
+    return DEFAULT
+
+
+def main():
+    args = sys.argv[1:]
+    cwd = os.getcwd()
+    entry = {
+        "argv": args,
+        "cwd": cwd,
+        "cwd_entries": sorted(os.listdir(cwd)),
+        "pid": os.getpid(),
+        "env": {
+            k: v for k, v in os.environ.items() if k.startswith("CLAUDE") or k in ("PWD", "OLDPWD")
+        },
+    }
+    if "--help" in args:
+        _log({**entry, "mode": "help"})
+        if os.environ.get("FAKE_CLAUDE_HELP_SLEEP"):
+            time.sleep(float(os.environ["FAKE_CLAUDE_HELP_SLEEP"]))
+        drop = os.environ.get("FAKE_CLAUDE_DROP", "")
+        for flag in FLAGS:
+            if flag != drop:
+                print(f"  {flag}    fake description")
+        return 0
+    if "-p" not in args:
+        print("fake_claude: only --help and -p are supported", file=sys.stderr)
+        return 2
+
+    prompt = sys.stdin.read()
+    entry.update(mode="print", prompt=prompt)
+    reply = _pick(prompt)
+    if "sleep" in reply:
+        child = subprocess.Popen(["sleep", str(reply["sleep"])])
+        _log({**entry, "child_pid": child.pid})
+        child.wait()
+        reply = DEFAULT
+    else:
+        _log(entry)
+
+    if "exit" in reply:
+        print(f"fake failure for prompt: {prompt}", file=sys.stderr)
+        return int(reply["exit"])
+    if "raw" in reply:
+        sys.stdout.write(reply["raw"] * int(reply.get("repeat", 1)))
+        return 0
+    body = {k: v for k, v in reply.items() if k != "exit_after"}
+    sys.stdout.write(json.dumps(body))
+    return int(reply.get("exit_after", 0))
+
+
+if __name__ == "__main__":
+    sys.exit(main())

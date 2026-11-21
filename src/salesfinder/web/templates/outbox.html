@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{# This page shows its own sending banner. #}
+{% set own_sending_banner = true %}
+{% block title %}Outbox{% endblock %}
+{% macro list_state() -%}
+  <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+  {% for key, value in state.items() %}<input type="hidden" name="{{ key }}" value="{{ value }}">
+  {% endfor %}
+{%- endmacro %}
+{% macro post(m, action, label, cls="button button-secondary") -%}
+<form method="post" action="/outbox/{{ m.id }}/{{ action }}" class="inline-form">
+  {{ list_state() }}
+  <button type="submit" class="{{ cls }}">{{ label }}</button>
+</form>
+{%- endmacro %}
+{% block content %}
+<section class="card">
+  <h1>Outbox</h1>
+  {% if flash %}<p class="alert alert-success" role="status">{{ flash }}</p>{% endif %}
+  {% if sending.paused %}<p class="alert alert-warn sending-banner" role="status">Sending is paused: {{ sending.reason }}</p>{% endif %}
+  <nav class="tabs" aria-label="Outbox tabs">
+    {% for key, label, count, url in tabs %}
+    <a href="{{ url }}"{% if key == view %} aria-current="page"{% endif %}>{{ label }} ({{ count }})</a>
+    {% endfor %}
+  </nav>
+  {% if view == "review" %}
+  <p class="muted">First emails, follow-ups that fell due and drafted answers to replies, oldest first. <strong>Ready</strong> ones passed the gate; approving re-runs it on live data. <strong>Held by the gate</strong> ones need an edit, a re-check (if the reason has since cleared) or a rejection.</p>
+  {% elif view == "approved" %}
+  <p class="muted">Approved and waiting for the sender. Each shows why its mailbox may be holding it. <strong>Withdraw</strong> puts an email back in To review.</p>
+  {% else %}
+  <p class="muted">Sends that need a teammate: ones we couldn't confirm went out, and ones that failed.</p>
+  {% endif %}
+  <form method="get" action="/outbox" class="row-form filters">
+    {% if view != "review" %}<input type="hidden" name="view" value="{{ view }}">{% endif %}
+    <label>Campaign
+      <select name="campaign">
+        <option value="">All campaigns</option>
+        {% for c in campaigns %}
+        <option value="{{ c.id }}"{% if c.id == campaign_filter %} selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Kind
+      <select name="kind">
+        {% for key, label in kind_filters.items() %}
+        <option value="{{ key }}"{% if key == kind %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit" class="button button-secondary">Show</button>
+  </form>
+  <p class="count">{{ total }} {% if view == "review" %}waiting{% elif view == "approved" %}approved{% else %}with a problem{% endif %}{% if pages > 1 %} · page {{ page }} of {{ pages }}{% endif %}</p>
+  {% if view == "review" and any_ready %}
+  <form id="bulk-approve" method="post" action="/outbox/bulk-approve" class="actions">
+    {{ list_state() }}
+    <button type="submit" class="button">Approve selected</button>
+    <span class="muted small">Tick “Select” on ready emails (at most {{ bulk_limit }} at a time). Each is re-checked by the gate.</span>
+  </form>
+  {% endif %}
+</section>
+
+{% for item in items %}
+{% set m = item.message %}
+<article class="card outbox-item" id="m-{{ m.id }}">
+  <div class="outbox-head">
+    {% if view == "review" and m.status == "awaiting_approval" %}
+    <label class="check"><input type="checkbox" name="ids" value="{{ m.id }}" form="bulk-approve"> Select</label>
+    {% endif %}
+    <span class="badge kind-badge">{{ kind_labels.get(item.kind, item.kind) }}</span>
+    {% if m.status in ("awaiting_approval", "approved") %}
+    <span class="badge badge-ok">{{ status_labels[m.status] }}</span>
+    {% else %}
+    <span class="badge badge-off">{{ status_labels.get(m.status, m.status) }}</span>
+    {% endif %}
+    {% if m.edited %}<span class="badge badge-warn">Edited</span>{% endif %}
+    {% if m.written_by_id %}<span class="badge badge-warn">Written by a teammate</span>{% endif %}
+    {% if view == "approved" and item.held_by_campaign_pause %}<span class="badge badge-warn campaign-paused" title="Nothing cold is sent while the campaign is paused.">Campaign paused</span>
+    {% elif view == "review" and item.campaign_paused %}<span class="badge badge-warn campaign-paused" title="Approving is allowed; nothing cold is sent while the campaign is paused.">Campaign paused</span>{% endif %}
+    <span class="muted small">{{ item.campaign_name }} · {% if view == "approved" %}approved {{ m.approved_at|utc }}{% elif view == "problems" %}tried {{ (m.claimed_at or m.updated_at)|utc }}{% else %}drafted {{ m.created_at|utc }}{% endif %}</span>
+  </div>
+  <dl class="facts">
+    <dt>Company</dt><dd><a href="/companies/{{ item.company.id }}" class="break">{{ item.company.name }}</a> <span class="muted">· {{ item.company.domain }}</span></dd>
+    <dt>To</dt><dd class="break">{% if item.person %}{{ item.person.full_name }}{% if item.person.title %}, {{ item.person.title }}{% endif %} · {% endif %}<span class="mono">{{ item.recipient }}</span></dd>
+    {% if item.kind == "followup" %}<dt>First email</dt><dd class="first-sent">{% if item.step1_sent_at %}First email sent {{ item.step1_sent_at|utc }}{% else %}<span class="muted">not sent</span>{% endif %}</dd>{% endif %}
+    {% if item.kind == "reply" and conversations.get(item.sequence.id) %}<dt>Conversation</dt><dd><a href="/conversations/{{ conversations[item.sequence.id] }}">Open the conversation</a></dd>{% endif %}
+    <dt>Subject</dt><dd class="break email-subject">{{ m.subject }}</dd>
+    {% if view == "approved" and holds.get(m.id) %}<dt>Waiting because</dt><dd class="break hold-reason">{{ holds[m.id] }}</dd>{% endif %}
+  </dl>
+  {% if item.kind == "reply" and item.in_reply_to_text %}
+  <p class="muted small">Their message:</p>
+  <blockquote class="their-message"><pre class="email-body">{{ item.in_reply_to_text }}</pre></blockquote>
+  {% endif %}
+  {% if m.status == "gate_failed" and m.gate_errors %}
+  <div class="alert alert-error gate-problems" role="status">
+    <p>Held by the gate:</p>
+    <ul class="reasons">{% for problem in m.gate_errors %}<li>{{ problem }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+  {% if m.status == "unconfirmed" %}
+  <p class="alert alert-warn unconfirmed-copy" role="status">{{ unconfirmed_copy }}</p>
+  {% elif m.status == "failed" %}
+  <div class="alert alert-error" role="status"><p>It failed{% if m.last_send_error %}: <span class="break last-send-error">{{ m.last_send_error }}</span>{% else %}.{% endif %}</p></div>
+  {% endif %}
+  <pre class="email-body">{{ m.body }}</pre>
+  <div class="actions">
+    {% if view == "review" %}
+      {% if m.status == "awaiting_approval" %}{{ post(m, "approve", "Approve", "button") }}{% else %}{{ post(m, "recheck", "Re-check") }}{% endif %}
+      <a class="button button-secondary" href="/outbox/{{ m.id }}{{ state_query }}">Edit</a>
+    {% elif m.status == "approved" %}
+      {{ post(m, "withdraw", "Withdraw") }}
+    {% elif m.status == "unconfirmed" %}
+      {{ post(m, "mark-sent", "It was sent", "button") }}
+      {{ post(m, "resend", "Send again") }}
+    {% elif m.status == "failed" %}
+      {{ post(m, "resend", "Send again") }}
+    {% endif %}
+  </div>
+  {% if view == "review" %}
+  <details class="reject">
+    <summary>Reject…</summary>
+    <form method="post" action="/outbox/{{ m.id }}/reject" class="stack">
+      {{ list_state() }}
+      <label>Why? <span class="muted">{% if item.kind == "reply" %}Only this draft is rejected; the conversation is then flagged “needs you”.{% else %}Claude reads recent reasons when drafting this campaign's next emails.{% endif %}</span>
+        <textarea name="reason" rows="2" maxlength="500" required></textarea>
+      </label>
+      <div><button type="submit" class="button button-danger">Reject</button></div>
+    </form>
+  </details>
+  {% endif %}
+</article>
+{% else %}
+<section class="card"><p class="muted">{% if view == "review" %}Nothing waiting for approval.{% elif view == "approved" %}Nothing approved is waiting to send.{% else %}No problems.{% endif %}</p></section>
+{% endfor %}
+
+{% if prev_url or next_url %}
+<nav class="pager" aria-label="Pages">
+  {% if prev_url %}<a href="{{ prev_url }}" rel="prev">← Older</a>{% else %}<span></span>{% endif %}
+  {% if next_url %}<a href="{{ next_url }}" rel="next">Newer →</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Audit log{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Audit log</h1>
+  <p class="muted">Latest {{ limit }} entries, newest first. Times are UTC.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Target</th><th>Details</th><th>IP</th></tr></thead>
+      <tbody>
+      {% for e in entries %}
+        <tr>
+          <td class="nowrap">{{ e.row.at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+          <td>{{ e.actor or "—" }}</td>
+          <td class="mono">{{ e.row.action }}</td>
+          <td class="mono">{% if e.row.target_type %}{{ e.row.target_type }}:{{ e.row.target_id }}{% endif %}</td>
+          <td class="mono break">{% for k, v in e.row.details.items() %}{{ k }}={{ v }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+          <td class="mono">{{ e.row.ip or "" }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="muted">Nothing recorded yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

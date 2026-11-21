@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}{{ company.name }}{% endblock %}
+{% block content %}
+<p><a href="/companies?side={{ company.side }}">← Back to {{ "Buyers" if company.side == "buyer" else "Suppliers" }}</a></p>
+<section class="card">
+  <h1 class="break">{{ company.name }}</h1>
+  <dl class="facts">
+    <dt>Side</dt><dd>{{ company.side }}</dd>
+    <dt>Website</dt><dd class="break">{% set url = company.website_url|web_url %}{% if url %}<a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ url }}</a>{% else %}{{ company.website_url }}{% endif %}</dd>
+    <dt>Domain</dt><dd>{{ company.domain }}</dd>
+    <dt>Country / region</dt><dd>{{ company.country or "—" }}{% if company.region %} · {{ company.region }}{% endif %}</dd>
+    <dt>Status</dt>
+    <dd>
+      {% if company.status == "excluded" %}
+      <span class="badge badge-off">excluded</span> {{ exclusion_labels.get(company.exclusion_reason, company.exclusion_reason) }}
+      {% if company.exclusion_detail %}<div class="muted">{{ company.exclusion_detail }}</div>{% endif %}
+      {% else %}
+      <span class="badge badge-ok">new</span>
+      {% endif %}
+    </dd>
+    <dt>Found by</dt>
+    <dd>{% if job %}<a href="/discover/jobs/{{ job.id }}">{{ job.side|capitalize }} discovery job</a> <span class="muted">· {{ job.created_at|utc }}</span>{% else %}{{ company.source }}{% endif %}</dd>
+    <dt>Search</dt><dd class="mono break">{{ company.discovery_query or "—" }}</dd>
+    <dt>Snippet</dt><dd class="break">{{ company.snippet or "—" }}</dd>
+    <dt>Added</dt><dd>{{ company.created_at|utc }}</dd>
+  </dl>
+</section>
+
+{% if company.status != "excluded" %}
+<section class="card">
+  <h2>Profile</h2>
+  {% if flash %}<p class="alert alert-success" role="status">{{ flash }}</p>{% endif %}
+  <dl class="facts">
+    <dt>Status</dt><dd>{{ profile_labels.get(company.profile_status, company.profile_status) }}</dd>
+    {% if company.profile_error %}<dt>Problem</dt><dd class="break">{{ company.profile_error }}</dd>{% endif %}
+    <dt>Last profiled</dt><dd>{{ company.profiled_at|utc }}</dd>
+    <dt>Pages read</dt><dd>{{ company.pages_fetched if company.pages_fetched is not none else "—" }}</dd>
+    <dt>Score</dt>
+    <dd>
+      {% if company.disqualified %}<span class="badge badge-off">✗ disqualified</span>
+      {% elif company.score is not none %}<strong>{{ company.score }}</strong> / 100
+      {% else %}<span class="muted">Not scored yet</span>{% endif %}
+      {% if score_result and score_result.reasons %}
+      <ul class="reasons">
+        {% for reason in score_result.reasons %}<li>{{ reason }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+    </dd>
+  </dl>
+  <form method="post" action="/companies/{{ company.id }}/reprofile" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+    <button type="submit" class="button">Profile again</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Signals</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Signal</th><th>Found</th><th>Evidence</th></tr></thead>
+      <tbody>
+      {% for row in signal_rows %}
+        <tr>
+          <td>{{ row.signal.label }}</td>
+          <td class="break">{{ row.text }}</td>
+          <td class="break">
+            {% if row.snippet %}{{ row.snippet }}{% endif %}
+            {% set link = row.url|web_url %}
+            {% if link %}<div class="small"><a href="{{ link }}" target="_blank" rel="noopener noreferrer">Source page</a></div>{% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="3" class="muted">No signals collected yet. Confirm signals on the <a href="/signals">Signals page</a>.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>People &amp; email</h2>
+  {% if contacts.people_note and contacts.people %}<p class="muted">{{ contacts.people_note }}</p>{% endif %}
+  {% if contacts.people %}
+  <h3>People</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th></th><th>Name</th><th>Title</th><th>Role</th><th>Source</th></tr></thead>
+      <tbody>
+      {% for p in contacts.people %}
+        <tr class="person-row">
+          <td>{% if p.is_target %}<span title="Target contact" aria-label="Target contact">★</span>{% endif %}</td>
+          <td class="break">{{ p.full_name }}</td>
+          <td class="break">{{ p.title or "—" }}</td>
+          <td>{{ category_labels.get(p.title_category, p.title_category) }}</td>
+          <td class="break">
+            {% if p.source_snippet %}{{ p.source_snippet }}{% endif %}
+            {% set link = p.source_url|web_url %}
+            {% if link %}<div class="small"><a href="{{ link }}" target="_blank" rel="noopener noreferrer">Source page</a></div>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="muted">{{ contacts.people_note }}</p>
+  {% endif %}
+
+  <h3>Addresses</h3>
+  <p class="muted small">{{ mx_labels.get(contacts.mx_state, contacts.mx_state) }} · {{ contacts.pattern }}</p>
+  {% set form_link = company.contact_form_url|web_url %}
+  {% if form_link %}<p>Contact form: <a href="{{ form_link }}" target="_blank" rel="noopener noreferrer">{{ form_link }}</a></p>{% endif %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Address</th><th>Kind</th><th>Status</th><th>Sendable</th><th>Evidence</th><th>Override</th></tr></thead>
+      <tbody>
+      {% for a in contacts.addresses %}
+        <tr class="address-row">
+          <td class="break mono">{{ a.address }}</td>
+          <td>{{ a.kind }}</td>
+          <td><span class="badge {{ a.badge.css }}">{{ a.badge.label }}</span></td>
+          <td>{% if a.sendable %}<strong>Yes</strong>{% else %}No{% endif %}{% if a.reason %}<div class="muted small">{{ a.reason }}</div>{% endif %}</td>
+          <td class="break">
+            {% if a.evidence_snippet %}{{ a.evidence_snippet }}{% endif %}
+            {% set link = a.evidence_url|web_url %}
+            {% if link %}<div class="small"><a href="{{ link }}" target="_blank" rel="noopener noreferrer">Source page</a></div>{% endif %}
+          </td>
+          <td class="nowrap">
+            {% if a.can_allow %}
+            <form method="post" action="/companies/{{ company.id }}/emails/{{ a.id }}/override" class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+              <input type="hidden" name="decision" value="allow">
+              <button type="submit" class="button">Allow sending</button>
+            </form>
+            {% endif %}
+            {% if a.override is not false %}
+            <form method="post" action="/companies/{{ company.id }}/emails/{{ a.id }}/override" class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+              <input type="hidden" name="decision" value="block">
+              <button type="submit" class="button">Don't send</button>
+            </form>
+            {% endif %}
+            {% if a.override is not none %}
+            <form method="post" action="/companies/{{ company.id }}/emails/{{ a.id }}/override" class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+              <input type="hidden" name="decision" value="clear">
+              <button type="submit" class="button">Clear</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="muted">No addresses found yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

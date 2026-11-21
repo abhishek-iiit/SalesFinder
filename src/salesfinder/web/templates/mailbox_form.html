@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{% if mailbox %}Edit mailbox{% else %}New mailbox{% endif %}{% endblock %}
+{% block content %}
+<p><a href="/admin/mailboxes">← All mailboxes</a></p>
+<section class="card">
+  <h1>{% if mailbox %}Edit {{ mailbox.address }}{% else %}New mailbox{% endif %}</h1>
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="{% if mailbox %}/admin/mailboxes/{{ mailbox.id }}{% else %}/admin/mailboxes/new{% endif %}" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+    <label>Address <span class="muted">on the sending domain, never elchemy.com</span>
+      <input type="email" name="address" value="{{ v.address }}" maxlength="320" required{% if mailbox %} readonly{% endif %}>
+    </label>
+    <label>Side
+      <select name="side">
+        {% for s in ("buyer", "supplier") %}<option value="{{ s }}"{% if v.side == s %} selected{% endif %}>{{ s }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Username <span class="muted">usually the address</span>
+      <input type="text" name="username" value="{{ v.username }}" maxlength="320" required>
+    </label>
+    <label>Password name <span class="muted">the key in SALESFINDER_MAILBOX_PASSWORDS (lowercase letters, digits, underscore). The password itself is never entered here.</span>
+      <input type="text" name="secret_name" value="{{ v.secret_name }}" maxlength="32" required>
+    </label>
+    <label>SMTP server <input type="text" name="smtp_host" value="{{ v.smtp_host }}" required></label>
+    <label>SMTP port <input type="number" name="smtp_port" value="{{ v.smtp_port }}" min="1" max="65535" required></label>
+    <label>SMTP security
+      <select name="smtp_security">
+        {% for s in ("ssl", "starttls") %}<option value="{{ s }}"{% if v.smtp_security == s %} selected{% endif %}>{{ s }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>IMAP server <input type="text" name="imap_host" value="{{ v.imap_host }}" required></label>
+    <label>IMAP port <input type="number" name="imap_port" value="{{ v.imap_port }}" min="1" max="65535" required></label>
+    <label>Sent folder <span class="muted">leave blank to detect it</span>
+      <input type="text" name="sent_folder" value="{{ v.sent_folder }}" maxlength="200">
+    </label>
+    <label>DKIM selector <input type="text" name="dkim_selector" value="{{ v.dkim_selector }}" maxlength="63" required></label>
+    <label>Daily maximum <span class="muted">1–{{ max_daily }} first emails and follow-ups a day, once warmed up</span>
+      <input type="number" name="daily_max" value="{{ v.daily_max }}" min="1" max="{{ max_daily }}" required>
+    </label>
+    <label>Warm-up start date <span class="muted">no cold email for the first 14 days after it</span>
+      <input type="date" name="warmup_started_on" value="{{ v.warmup_started_on }}">
+    </label>
+    <div class="actions">
+      <button type="submit" class="button">{% if mailbox %}Save{% else %}Add mailbox{% endif %}</button>
+      <a href="/admin/mailboxes">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

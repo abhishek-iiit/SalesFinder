@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Discover{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Discover companies</h1>
+  <p class="muted">Pick what to search for. You'll see how many searches it takes and what it costs before anything is spent.</p>
+  <dl class="stats">
+    <div><dt>Budget this month</dt><dd>{{ budget|usd }}</dd></div>
+    <div><dt>Spent this month</dt><dd>{{ spent|usd }}</dd></div>
+    <div><dt>Remaining this month</dt><dd>{{ remaining|usd(2, down=True) }}</dd></div>
+  </dl>
+  <p class="muted small">Spent includes approved jobs that haven't run yet. Months are calendar months in UTC.</p>
+</section>
+
+<section class="card" id="discover-form">
+  <h2>New search</h2>
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="/discover/estimate" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+
+    <fieldset class="choices">
+      <legend>Side</legend>
+      {% for value, label in [("buyer", "Buyers — companies that use our products"), ("supplier", "Suppliers — manufacturers we could source from")] %}
+      <label class="check"><input type="radio" name="side" value="{{ value }}"{% if side == value %} checked{% endif %} hx-get="/discover" hx-trigger="change" hx-select="#discover-form" hx-target="#discover-form" hx-swap="outerHTML" hx-push-url="true"> {{ label }}</label>
+      {% endfor %}
+      {% set other = "supplier" if side == "buyer" else "buyer" %}
+      <p class="muted small">Products and regions below are for the {{ side }} side. <a href="/discover?side={{ other }}">Show the {{ other }} side instead</a>.</p>
+    </fieldset>
+
+    <fieldset class="choices">
+      <legend>Products</legend>
+      {% for group in groups %}
+      <div class="choice-group">
+        <h3>{{ group.label }}</h3>
+        {% for p in group.products %}
+        <label class="check"><input type="checkbox" name="products" value="{{ p.id }}"{% if p.id in selection.products %} checked{% endif %}> <span>{{ p.name }}{% if p.industries|length > 1 %} <span class="muted">(also {% for key in p.industries[1:] %}{{ industries[key] }}{% if not loop.last %}, {% endif %}{% endfor %})</span>{% endif %}</span></label>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted">No products in the catalog for this side.</p>
+      {% endfor %}
+    </fieldset>
+
+    <fieldset class="choices">
+      <legend>Industries <span class="muted">(buyers only — ignored for suppliers)</span></legend>
+      <div class="choice-grid">
+      {% for key, label in industries.items() %}
+        <label class="check"><input type="checkbox" name="industries" value="{{ key }}"{% if key in selection.industries %} checked{% endif %}> {{ label }}</label>
+      {% endfor %}
+      </div>
+    </fieldset>
+
+    <fieldset class="choices">
+      <legend>Regions</legend>
+      <div class="choice-grid">
+      {% for region in regions %}
+        <label class="check"><input type="checkbox" name="regions" value="{{ region.name }}"{% if region.name in selection.regions %} checked{% endif %}> {{ region.name }} <span class="muted">({{ region.country }})</span></label>
+      {% endfor %}
+      </div>
+    </fieldset>
+
+    <div><button type="submit" class="button">Estimate cost</button></div>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Latest jobs</h2>
+  {% if recent %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Created</th><th>Side</th><th>Status</th><th>Searches</th><th>Estimate</th><th>Spent</th><th></th></tr></thead>
+      <tbody>
+      {% for job in recent %}
+        <tr>
+          <td class="nowrap">{{ job.created_at|utc }}</td>
+          <td>{{ job.side }}</td>
+          <td><span class="status status-{{ job.status }}">{{ job.status|replace("_", " ") }}</span></td>
+          <td>{{ job.searches_done }} / {{ job.estimated_searches }}</td>
+          <td class="nowrap">{{ job.estimated_cost_usd|usd(4) }}</td>
+          <td class="nowrap">{{ job.actual_cost_usd|usd(4) }}</td>
+          <td><a href="/discover/jobs/{{ job.id }}">Open</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="muted">No discovery jobs yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

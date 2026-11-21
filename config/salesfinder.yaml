@@ -1,0 +1,198 @@
+# SalesFinder defaults. Override locally in config/salesfinder.local.yaml (git-ignored);
+# dicts are merged key by key, lists are replaced.
+
+usage:
+  # Minutes of worker passes one `runs` row covers (the heartbeat log on the Runs page).
+  # The worker itself runs a pass every worker.poll_seconds. 1-1440.
+  heartbeat_interval_minutes: 15
+  # Hard cap on Claude CLI calls per day.
+  max_daily_claude_calls: 150
+  # The worker's Claude steps (Replies and Writing) wait during quiet hours; mail reading,
+  # sending and everything else keep running. start == end means no quiet hours; end is
+  # exclusive. Quote times: unquoted 22:00 is a YAML number.
+  quiet_hours:
+    start: "22:00"
+    end: "07:00"
+    timezone: America/New_York
+
+discovery:
+  serper_price_per_1000_usd: 1.00
+  monthly_budget_usd: 20.00
+  pages_per_query: 1
+  results_per_page: 10
+  max_queries_per_job: 200
+  templates:
+    buyer: '"{chemical}" {keyword} manufacturer {region}'
+    supplier: '"{chemical}" manufacturer exporter {region}'
+  industry_keywords:
+    personal_care: ["shampoo", "skin care", "cosmetics"]
+    home_care: ["household cleaner", "detergent", "industrial cleaning"]
+    flavours_fragrance: ["fragrance", "flavor"]
+    food_nutrition: ["food ingredients", "nutraceutical"]
+    oil_gas: ["oilfield chemicals"]
+    chemical_intermediates: ["specialty chemicals"]
+    water_treatment_mining: ["water treatment", "mining chemicals"]
+    case: ["coatings", "adhesives", "sealants"]
+  buyer_regions:
+    - {name: "New Jersey", country: US, gl: us}
+    - {name: "New York", country: US, gl: us}
+    - {name: "Pennsylvania", country: US, gl: us}
+    - {name: "Texas", country: US, gl: us}
+    - {name: "Illinois", country: US, gl: us}
+    - {name: "Ohio", country: US, gl: us}
+    - {name: "California", country: US, gl: us}
+    - {name: "Georgia", country: US, gl: us}
+  supplier_regions:
+    - {name: "Gujarat", country: IN, gl: in}
+    - {name: "Maharashtra", country: IN, gl: in}
+    - {name: "Tamil Nadu", country: IN, gl: in}
+    - {name: "Telangana", country: IN, gl: in}
+    - {name: "Thailand", country: TH, gl: th}
+    - {name: "Malaysia", country: MY, gl: my}
+    - {name: "Indonesia", country: ID, gl: id}
+    - {name: "Vietnam", country: VN, gl: vn}
+  junk_domains: []
+
+hubspot:
+  sync_interval_hours: 24
+  stale_after_hours: 48
+
+worker:
+  poll_seconds: 10
+
+profiling:
+  # Companies profiled per worker pass, and how many are fetched at once.
+  batch_size: 10
+  concurrency: 4
+  max_pages_per_company: 8
+  page_timeout_seconds: 10
+  max_page_bytes: 2000000
+  # Re-profile companies whose last profile is older than this.
+  refresh_after_days: 30
+  user_agent: "SalesFinderBot/0.1 (+https://elchemy.com)"
+
+scoring:
+  near_warehouse_miles: 500
+  # Points per signal, 0-100. Keys are signal codes, plus COMPANY_TYPE_PRODUCER /
+  # COMPANY_TYPE_DISTRIBUTOR (buyer) and MANUFACTURER (supplier).
+  buyer:
+    USES_CATALOG_CHEMICAL: 30
+    INDUSTRY_MATCH: 15
+    COMPANY_TYPE_PRODUCER: 20
+    COMPANY_TYPE_DISTRIBUTOR: 10
+    US_LOCATION: 5
+    NEAR_WAREHOUSE: 10
+    HIRING_PROCUREMENT: 10
+    QUALITY_CERTS: 10
+  supplier:
+    MAKES_CATALOG_CHEMICAL: 35
+    MANUFACTURER: 20
+    EXPORTS: 10
+    EXPORTS_TO_US: 10
+    SUPPLIER_CERTS: 15
+    STATED_CAPACITY: 10
+
+contacts:
+  # People marked as outreach targets per company.
+  max_targets_per_company: 2
+  # MX lookups only (never SMTP): per-lookup timeout, parallel lookups, cache lifetime.
+  dns_timeout_seconds: 5
+  dns_concurrency: 8
+  mx_cache_days: 7
+  # Companies processed per worker pass, and how long before contacts are re-checked.
+  batch_size: 10
+  recheck_after_days: 30
+  # Optional paid verifier: none or millionverifier (needs SALESFINDER_EMAIL_VERIFIER_KEY).
+  verifier: none
+  verifier_max_per_day: 100
+
+brain:
+  # Claude model alias or id for the CLI; empty uses the CLI's default.
+  model: ""
+  # Per-call timeout: at least 10 seconds and under 135. A stopping worker may still wait on
+  # 4 Claude calls (plus about a minute for the rest of its pass), and launchd kills it 600 s
+  # after asking it to stop (the plist's ExitTimeOut): 4 x 135 + 60 = 600.
+  timeout_seconds: 120
+
+writing:
+  first_email_max_words: 140
+  followup_max_words: 100
+  subject_max_chars: 80
+  # Business days between the first email and the follow-up.
+  followup_business_days: 4
+  # Optional https link the writer may offer; empty means none.
+  booking_url: ""
+  # Appended to every email. Double-quoted YAML so both quote types are safe.
+  opt_out_line: "If you'd rather not hear from us, just reply \"unsubscribe\" and we won't email you again."
+  # Drafts containing any of these (case-insensitive) fail the gate.
+  banned_phrases:
+    - "guarantee"
+    - "guarantees"
+    - "guaranteed"
+    - "lowest price"
+    - "cheapest"
+    - "best price"
+    - "risk-free"
+    - "act now"
+    - "limited time"
+    - "100%"
+    - "no obligation"
+    - "free trial"
+  # Recent rejection reasons shown to the writer.
+  max_feedback_items: 5
+  # The worker drafts at most once every this many minutes (1-1440).
+  min_interval_minutes: 5
+  # Most companies one drafting pass asks Claude about (1-100; `salesfinder draft --limit`).
+  batch_size: 10
+  # Longest a reply may be (20-500 words).
+  reply_max_words: 180
+  # Most seconds one writing pass may run (30-3600).
+  max_pass_seconds: 300
+
+sending:
+  # Recipient-local office hours, weekdays only. Quote the times.
+  office_start: "09:00"
+  office_end: "17:00"
+  # Random gap between sends from one mailbox.
+  min_spacing_seconds: 180
+  max_spacing_seconds: 540
+  # No cold email for the first warmup_days; then ramp_start/day rising by ramp_step/day
+  # up to the mailbox's daily_max (never above max_daily_cap).
+  warmup_days: 14
+  ramp_start: 5
+  ramp_step: 3
+  max_daily_cap: 50
+  # Pause all sending if the bounce rate over the last bounce_window sends exceeds this.
+  bounce_window: 50
+  bounce_max_rate: 0.05
+  # A message stuck in "sending" is looked up in the Sent folder after this long.
+  reconcile_after_minutes: 10
+  max_send_attempts: 3
+  retry_minutes: [5, 15]
+  dns_max_age_hours: 24
+  smtp_timeout_seconds: 30
+  candidates_per_pass: 20
+
+mail:
+  poll_interval_minutes: 5
+  imap_timeout_seconds: 30
+  max_messages_per_poll: 200
+  max_message_bytes: 5000000
+  max_body_chars: 20000
+
+replies:
+  min_confidence: 0.7
+  max_classify_failures: 2
+  batch_size: 10
+  max_pass_seconds: 300
+
+ops:
+  # How often the worker's background beat marks it alive (5-300).
+  beat_seconds: 30
+  # The worker counts as stopped responding after this long without a beat
+  # (at least twice beat_seconds).
+  worker_stale_seconds: 180
+  # Finished runs older than this are deleted (1-365).
+  runs_keep_days: 30
+  # Most log lines one run keeps; the rest are counted (10-2000).
+  max_run_lines: 200

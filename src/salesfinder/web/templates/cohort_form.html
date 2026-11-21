@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit cohort" if cohort_id else "New " ~ side ~ " cohort" }}{% endblock %}
+{% block content %}
+<p><a href="{{ '/cohorts/' ~ cohort_id if cohort_id else '/cohorts' }}">← Back</a></p>
+<form method="post" action="{{ action }}" class="stack"
+      hx-post="/cohorts/count" hx-trigger="change delay:300ms" hx-target="#cohort-count" hx-swap="innerHTML"
+      hx-headers="{{ hx_headers }}">
+  <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+  <input type="hidden" name="side" value="{{ side }}">
+
+  <section class="card">
+    <h1>{{ "Edit " ~ side ~ " cohort" if cohort_id else "New " ~ side ~ " cohort" }}</h1>
+    {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+    <label>Name
+      <input type="text" name="name" value="{{ state.name }}" maxlength="120" required>
+    </label>
+    <div id="cohort-count" class="cohort-count" aria-live="polite">{% include "_cohort_count.html" %}</div>
+  </section>
+
+  <section class="card">
+    <h2>{{ side_label }} signals</h2>
+    <p class="muted">For each signal choose whether a company must match it, must not match it, or whether it doesn't matter. With nothing ticked, any finding counts.</p>
+    {% for row in rows %}
+    {% set current = state.row(row.code) %}
+    <fieldset class="choices signal-row" data-code="{{ row.code }}">
+      <legend>{{ row.label }} <span class="muted small">{{ row.description }}</span></legend>
+      <label>Use it
+        <select name="mode.{{ row.code }}">
+          {% for value, label in modes %}
+          <option value="{{ value }}"{% if current.mode == value %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% if row.choices %}
+      <div class="choice-grid">
+        {% for value, label in row.choices %}
+        <label class="check"><input type="checkbox" name="values.{{ row.code }}" value="{{ value }}"{% if value in current.values %} checked{% endif %}> {{ label }}</label>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if row.number_label %}
+      <label>{{ row.number_label }} <span class="muted">blank: any</span>
+        <input type="number" name="number.{{ row.code }}" value="{{ current.number }}" min="0" step="any">
+      </label>
+      {% endif %}
+    </fieldset>
+    {% else %}
+    <p class="muted">No {{ side }} signals are confirmed yet, so cohorts can only filter by score. <a href="/signals">Confirm signals</a></p>
+    {% endfor %}
+
+    {% if unconfirmed %}
+    <h3>Not collected yet</h3>
+    <ul class="unconfirmed muted">
+      {% for s in unconfirmed %}
+      {% set kept = state.row(s.code) %}
+      <li>{{ s.label }} — not confirmed, so profiling doesn't collect it. <a href="/signals">Confirm it on the Signals page</a>
+        {% if kept.mode != "ignore" %}
+        <div class="small">A saved condition on this signal is kept; until the signal is confirmed no company has it.</div>
+        <input type="hidden" name="mode.{{ s.code }}" value="{{ kept.mode }}">
+        {% for value in kept.values %}<input type="hidden" name="values.{{ s.code }}" value="{{ value }}">{% endfor %}
+        {% if kept.number %}<input type="hidden" name="number.{{ s.code }}" value="{{ kept.number }}">{% endif %}
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Score</h2>
+    <div class="row-form">
+      <label>Minimum score <span class="muted">0–100, blank: any</span>
+        <input type="text" inputmode="numeric" name="min_score" value="{{ state.min_score }}" maxlength="3">
+      </label>
+      <label class="check"><input type="checkbox" name="include_disqualified" value="1"{% if state.include_disqualified %} checked{% endif %}> Include disqualified companies</label>
+      <label class="check"><input type="checkbox" name="include_unprofiled" value="1"{% if state.include_unprofiled %} checked{% endif %}> {{ unprofiled_label }} <span class="muted small">never read (waiting, failed, blocked or no website): no findings, so “must not” can't rule them out</span></label>
+      <label class="check"><input type="checkbox" name="require_sendable_contact" value="1"{% if state.require_sendable_contact %} checked{% endif %}> Only companies with a sendable contact</label>
+    </div>
+  </section>
+
+  <div class="actions">
+    <button type="submit" class="button">Save cohort</button>
+    <a href="{{ '/cohorts/' ~ cohort_id if cohort_id else '/cohorts' }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

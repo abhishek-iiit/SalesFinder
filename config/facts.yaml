@@ -1,0 +1,32 @@
+# Only confirmed facts may be used in emails (Phase 5). Confirm each item with the team.
+company_name: "Elchemy"
+website: "https://elchemy.com"
+postal_address: ""
+postal_address_confirmed: false
+warehouses:
+  - {city: "Bridgewater", state: "NJ", label: "Bridgewater, NJ", lat: 40.59, lon: -74.62}
+  - {city: "Houston", state: "TX", label: "Houston, TX", lat: 29.76, lon: -95.37}
+  - {city: "", state: "IL", label: "Illinois", lat: 41.88, lon: -87.63}
+  - {city: "Santa Fe Springs", state: "CA", label: "Santa Fe Springs, CA", lat: 33.94, lon: -118.08}
+claims:
+  - id: sample_dispatch
+    text: "Samples dispatched within 24–48 hours"
+    confirmed: false
+  - id: us_stock
+    text: "Stocked in US warehouses in New Jersey, Texas, Illinois and California"
+    confirmed: false
+  - id: documentation
+    text: "CoA and SDS supplied with every order"
+    confirmed: false
+  - id: certifications
+    text: "Kosher and Halal grades available on select products"
+    confirmed: false
+  - id: direct_import
+    text: "Bulk direct imports at competitive landed cost"
+    confirmed: false
+  - id: us_distributor
+    text: "Elchemy is a US-based distributor of specialty chemicals sourced from audited manufacturers in India and Southeast Asia"
+    confirmed: false
+personas:
+  buyer: {name: "", title: "", signature: "", confirmed: false}
+  supplier: {name: "", title: "", signature: "", confirmed: false}

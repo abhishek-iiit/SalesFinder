@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Conversations{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Conversations</h1>
+  <p class="muted">People who wrote back. <strong>Needs you</strong> means a teammate should read it: they sounded interested, Claude wasn't sure what they want, the reply came from another address, a draft was rejected, or a mail couldn't be read.</p>
+  <nav class="tabs" aria-label="Views">
+    {% for key, label in views %}
+    <a href="/conversations?view={{ key }}"{% if key == view %} aria-current="page"{% endif %}>{{ label }}{% if key == "needs_you" and auth.needs_you %} ({{ auth.needs_you }}){% endif %}</a>
+    {% endfor %}
+  </nav>
+  <p class="count">{{ total }} conversation{{ "" if total == 1 else "s" }}{% if pages > 1 %} · page {{ page }} of {{ pages }}{% endif %}</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Company</th><th>Person</th><th>Intent</th><th>Summary</th><th>Assigned</th><th>Last inbound</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+      {% for r in rows %}
+        {% set c = r.conversation %}
+        <tr>
+          <td class="break"><a href="/conversations/{{ c.id }}">{{ r.company.name }}</a><div class="muted small">{{ r.campaign_name }}</div></td>
+          <td class="break">{% if r.person %}{{ r.person.full_name }}<br>{% endif %}<span class="mono small">{{ r.sequence.recipient }}</span></td>
+          <td>{% if c.intent %}<span class="badge badge-warn intent">{{ intent_labels.get(c.intent, c.intent) }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+          <td class="break summary">{{ c.summary or "" }}{% if c.status == "needs_you" and c.needs_you_reason %}<div class="warn small">{{ c.needs_you_reason }}</div>{% endif %}</td>
+          <td>{{ r.assigned_name or "—" }}</td>
+          <td class="nowrap">{{ c.last_inbound_at|utc }}</td>
+          <td>{% if c.status == "needs_you" %}<span class="badge badge-off">{{ status_labels[c.status] }}</span>{% else %}{{ status_labels.get(c.status, c.status) }}{% endif %}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="muted">No conversations here.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% if prev_url or next_url %}
+<nav class="pager" aria-label="Pages">
+  {% if prev_url %}<a href="{{ prev_url }}" rel="prev">← Newer</a>{% else %}<span></span>{% endif %}
+  {% if next_url %}<a href="{{ next_url }}" rel="next">Older →</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

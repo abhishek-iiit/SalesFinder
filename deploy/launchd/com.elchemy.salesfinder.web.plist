@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.elchemy.salesfinder.web</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/YOU/SalesFinder/.venv/bin/salesfinder</string>
+		<string>web</string>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>/Users/YOU/SalesFinder</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/Users/YOU/.local/bin:/Users/YOU/SalesFinder/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		<key>LANG</key>
+		<string>en_US.UTF-8</string>
+		<key>SALESFINDER_LOG_FILE</key>
+		<string>/Users/YOU/Library/Logs/SalesFinder/web.log</string>
+	</dict>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+	<key>ThrottleInterval</key>
+	<integer>30</integer>
+	<key>ProcessType</key>
+	<string>Standard</string>
+	<key>ExitTimeOut</key>
+	<integer>30</integer>
+	<key>StandardOutPath</key>
+	<string>/Users/YOU/Library/Logs/SalesFinder/web.crash.log</string>
+	<key>StandardErrorPath</key>
+	<string>/Users/YOU/Library/Logs/SalesFinder/web.crash.log</string>
+</dict>
+</plist>

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Campaigns{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Campaigns</h1>
+  {% if flash %}<p class="alert alert-success" role="status">{{ flash }}</p>{% endif %}
+  <p class="muted">A campaign drafts emails for one cohort with the side's playbook, up to its daily cap. Drafts wait in the <a href="/outbox">Outbox</a> for a teammate; nothing is sent without approval.</p>
+  <div class="actions">
+    <a class="button" href="/campaigns/new?side=buyer">New buyer campaign</a>
+    <a class="button button-secondary" href="/campaigns/new?side=supplier">New supplier campaign</a>
+  </div>
+</section>
+
+<section class="card">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Side</th><th>Cohort</th><th>Status</th><th>Drafted today / cap</th><th>Ready to approve</th></tr></thead>
+      <tbody>
+      {% for s in summaries %}
+        {% set c = s.campaign %}
+        <tr class="campaign-row">
+          <td><a href="/campaigns/{{ c.id }}" class="break">{{ c.name }}</a>{% if c.last_error %}<div class="small warn last-error">Last error: {{ c.last_error }}</div>{% endif %}</td>
+          <td>{{ side_labels.get(c.side, c.side) }}</td>
+          <td class="break">{{ s.cohort_name }}</td>
+          <td>{{ status_labels.get(c.status, c.status) }}</td>
+          <td class="num nowrap">{{ s.drafted_today }} / {{ c.daily_draft_cap }}</td>
+          <td class="num">{% if s.awaiting_approval %}<a href="/outbox?campaign={{ c.id }}">{{ s.awaiting_approval }}</a>{% else %}0{% endif %}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="muted">No campaigns yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

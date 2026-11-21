@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Discovery job{% endblock %}
+{% block content %}
+<p><a href="/discover">← Back to Discover</a></p>
+<section class="card">
+  <h1>{{ job.side|capitalize }} discovery job</h1>
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  <dl class="facts">
+    <dt>Products</dt><dd>{{ products|join(", ") or "—" }}</dd>
+    {% if job.side == "buyer" %}<dt>Industries</dt><dd>{{ industries|join(", ") or "—" }}</dd>{% endif %}
+    <dt>Regions</dt><dd>{{ regions|join(", ") or "—" }}</dd>
+    <dt>Searches</dt><dd>{{ job.estimated_searches }} <span class="muted">({{ job.queries|length }} queries × {{ job.pages_per_query }} page{{ "s" if job.pages_per_query != 1 }})</span></dd>
+    <dt>Estimated cost</dt><dd>{{ job.estimated_cost_usd|usd(4) }}</dd>
+    <dt>Remaining this month</dt><dd>{{ remaining|usd(2, down=True) }} <span class="muted">of {{ budget|usd }}</span></dd>
+    <dt>Estimated by</dt><dd>{{ created_by.name if created_by else "—" }} <span class="muted">· {{ job.created_at|utc }}</span></dd>
+    {% if approved_by %}<dt>Approved by</dt><dd>{{ approved_by.name }} <span class="muted">· {{ job.approved_at|utc }}</span></dd>{% endif %}
+  </dl>
+  {% include "_job_status.html" %}
+</section>
+
+<section class="card">
+  <h2>Searches</h2>
+  <ol class="queries">
+  {% for q in queries %}
+    <li><span class="mono break">{{ q.q }}</span> <span class="muted">({{ q.region }}, {{ q.gl }})</span></li>
+  {% endfor %}
+  </ol>
+  {% if more_queries %}<p class="muted">+{{ more_queries }} more</p>{% endif %}
+</section>
+{% endblock %}

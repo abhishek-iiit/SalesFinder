@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ cohort.name }}{% endblock %}
+{% block content %}
+<p><a href="/cohorts">← All cohorts</a></p>
+<section class="card">
+  <h1 class="break">{{ cohort.name }}</h1>
+  {% if flash %}<p class="alert alert-success" role="status">{{ flash }}</p>{% endif %}
+  <p class="cohort-summary">{{ summary }}</p>
+  {% for warning in warnings %}<p class="alert alert-warn stale-warning" role="status">{{ warning }}</p>{% endfor %}
+  <dl class="facts">
+    <dt>Side</dt><dd>{{ side_label }}</dd>
+    <dt>Created by</dt><dd>{{ creator or "—" }} <span class="muted">· {{ cohort.created_at|utc }}</span></dd>
+    <dt>Updated</dt><dd>{{ cohort.updated_at|utc }}</dd>
+  </dl>
+  <div class="actions">
+    <a class="button" href="/cohorts/{{ cohort.id }}/edit">Edit</a>
+    <form method="post" action="/cohorts/{{ cohort.id }}/delete" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+      <button type="submit" class="button button-danger">Delete cohort</button>
+    </form>
+  </div>
+</section>
+
+{% if readable %}
+<section class="card">
+  <h2>{{ count_text }}</h2>
+  <p class="muted">Highest score first{% if pages > 1 %} · page {{ page }} of {{ pages }}{% endif %}. Excluded companies never match{% if not include_unprofiled %}, nor do companies whose website we haven't read yet{% endif %}.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Domain</th><th>Country / region</th><th>Profile</th><th>Score</th></tr></thead>
+      <tbody>
+      {% for c in rows %}
+        <tr class="company-row">
+          <td><a href="/companies/{{ c.id }}">{{ c.name }}</a></td>
+          <td class="break">{{ c.domain }}</td>
+          <td>{{ c.country or "—" }}{% if c.region %} <span class="muted">· {{ c.region }}</span>{% endif %}</td>
+          <td class="profile-status">{{ profile_labels.get(c.profile_status, c.profile_status) }}</td>
+          <td class="num">{% if c.disqualified %}<span class="badge badge-off" title="Disqualified">✗</span>{% elif c.score is not none %}{{ c.score }}{% endif %}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="muted">No companies match yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if prev_url or next_url %}
+  <nav class="pager" aria-label="Pages">
+    {% if prev_url %}<a href="{{ prev_url }}" rel="prev">← Higher scores</a>{% endif %}
+    {% if next_url %}<a href="{{ next_url }}" rel="next">Lower scores →</a>{% endif %}
+  </nav>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

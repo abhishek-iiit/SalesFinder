@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Conversation{% endblock %}
+{% macro post(action, label, cls="button button-secondary") -%}
+<form method="post" action="/conversations/{{ conv.id }}/{{ action }}" class="inline-form">
+  <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+  <button type="submit" class="{{ cls }}">{{ label }}</button>
+</form>
+{%- endmacro %}
+{% block content %}
+<p><a href="/conversations">← Conversations</a></p>
+<section class="card">
+  <h1 class="break">{{ company.name }}</h1>
+  {% if flash %}<p class="alert alert-success" role="status">{{ flash }}</p>{% endif %}
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  <dl class="facts">
+    <dt>Status</dt><dd>{% if conv.status == "needs_you" %}<span class="badge badge-off">{{ status_labels[conv.status] }}</span>{% if conv.needs_you_reason %} <span class="warn needs-you-reason">{{ conv.needs_you_reason }}</span>{% endif %}{% else %}{{ status_labels.get(conv.status, conv.status) }}{% endif %}</dd>
+    <dt>Intent</dt><dd>{% if conv.intent %}<span class="badge badge-warn intent">{{ intent_labels.get(conv.intent, conv.intent) }}</span>{% else %}<span class="muted">Not classified yet</span>{% endif %}</dd>
+    {% if conv.summary %}<dt>Summary</dt><dd class="break summary">{{ conv.summary }}</dd>{% endif %}
+    {% if conv.products %}<dt>Products</dt><dd class="break">{{ conv.products|join(", ") }}</dd>{% endif %}
+    <dt>Person</dt><dd class="break">{% if person %}{{ person.full_name }}{% if person.title %}, {{ person.title }}{% endif %} · {% endif %}<span class="mono">{{ sequence.recipient }}</span></dd>
+    <dt>Campaign</dt><dd class="break"><a href="/campaigns/{{ campaign.id }}">{{ campaign.name }}</a></dd>
+    <dt>Assigned</dt><dd>{{ names.get(conv.assigned_to_id) or "—" }}</dd>
+    {% if conv.status == "handled" %}<dt>Handled</dt><dd>{{ conv.handled_at|utc }}{% if conv.handled_by_id %} by {{ names.get(conv.handled_by_id) or "a former teammate" }}{% endif %}</dd>{% endif %}
+  </dl>
+  {% if waiting %}
+  <p class="alert alert-info waiting-for-claude" role="status">{% if waiting_reason %}Waiting for Claude: {{ waiting_reason }}.{% else %}Waiting for Claude to read this reply.{% endif %}</p>
+  {% endif %}
+  <div class="actions">
+    {% if conv.assigned_to_id != auth.user.id %}{{ post("assign", "Assign to me") }}{% endif %}
+    {% if conv.status not in ("handled", "taken_over") %}{{ post("handled", "Mark handled") }}{% endif %}
+    {% if conv.status != "taken_over" %}{{ post("take-over", "Take over", "button button-danger") }}{% endif %}
+  </div>
+  <p class="muted small"><strong>Mark handled</strong>: nothing more to do (Claude's unsent drafts are cancelled; an answer a teammate wrote still goes). <strong>Take over</strong>: you'll handle this person yourself; Claude's drafts and the follow-up are cancelled and nothing more is drafted (an answer a teammate wrote still goes). This is final.</p>
+</section>
+
+<section class="card">
+  <h2>Thread</h2>
+  {% for e in thread %}
+  <article class="thread-entry thread-{{ e.who }}">
+    <p class="outbox-head"><strong>{{ e.label }}</strong> <span class="muted small">{{ e.at|utc }}</span>{% if e.sender and e.who != "us" %} <span class="mono small break">{{ e.sender }}</span>{% endif %}{% if e.note %} <span class="badge badge-warn">{{ e.note }}</span>{% endif %}</p>
+    {% if e.subject and e.who != "event" %}<p class="break email-subject"><span class="muted">Subject:</span> {{ e.subject }}</p>{% elif e.subject %}<p class="break muted small">Subject: {{ e.subject }}</p>{% endif %}
+    {% if e.body %}{% if e.who == "us" %}<pre class="email-body">{{ e.body }}</pre>{% else %}<blockquote class="their-message"><pre class="email-body">{{ e.body }}</pre></blockquote>{% endif %}{% endif %}
+  </article>
+  {% else %}
+  <p class="muted">Nothing in this thread yet.</p>
+  {% endfor %}
+</section>
+
+<section class="card">
+  <h2>Answers waiting</h2>
+  {% for a in answers %}
+  <article class="drafted-answer">
+    <p class="outbox-head"><span class="badge {% if a.status == 'gate_failed' %}badge-off{% else %}badge-ok{% endif %}">{{ answer_labels.get(a.status, a.status) }}</span> <span class="muted small">{% if a.written_by_id %}written by {{ names.get(a.written_by_id) or "a teammate" }}{% else %}drafted by Claude{% endif %} · {{ a.created_at|utc }}</span> <a href="/outbox/{{ a.id }}">Open in the Outbox</a></p>
+    {% if a.status == "gate_failed" and a.gate_errors %}
+    <div class="alert alert-error gate-problems" role="status">
+      <p>Held by the gate:</p>
+      <ul class="reasons">{% for problem in a.gate_errors %}<li>{{ problem }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+    <p class="break email-subject"><span class="muted">Subject:</span> {{ a.subject }}</p>
+    <pre class="email-body">{{ a.body }}</pre>
+  </article>
+  {% else %}
+  <p class="muted">No answer waiting.</p>
+  {% endfor %}
+</section>
+
+<section class="card">
+  <h2>Write an answer</h2>
+  {% if can_answer %}
+  <form method="post" action="/conversations/{{ conv.id }}/reply" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+    <label>Your answer <span class="muted">without a signature or footer: they are added automatically</span>
+      <textarea name="body" rows="10" maxlength="{{ body_limit }}" required>{{ body }}</textarea>
+    </label>
+    <p class="muted small">It goes through the gate. If it passes, it is approved by you and sent from the campaign's mailbox (it replaces any unsent draft); once it is sent, the conversation is yours (taken over). If the gate holds it, the reasons are shown here and you can edit it in the Outbox.</p>
+    <div><button type="submit" class="button">Send answer</button></div>
+  </form>
+  {% else %}
+  <p class="muted">This conversation can't be answered from here (the sequence has stopped, the campaign is archived, or no sender persona is set). Answer from the mailbox if needed.</p>
+  {% endif %}
+</section>
+{% endblock %}

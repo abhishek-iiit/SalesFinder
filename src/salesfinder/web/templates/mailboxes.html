@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Mailboxes{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Mailboxes</h1>
+  {% if flash %}<p class="alert alert-success" role="status">{{ flash }}</p>{% endif %}
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  {% if test_result %}
+  <div class="alert {% if test_result.problems %}alert-error{% else %}alert-success{% endif %} test-result" role="status">
+    {% if test_result.problems %}
+    <p>Connection test for <strong>{{ test_result.address }}</strong> found problems:</p>
+    <ul class="reasons">{% for p in test_result.problems %}<li>{{ p }}</li>{% endfor %}</ul>
+    {% else %}
+    <p>Connection test for <strong>{{ test_result.address }}</strong> passed: SMTP login and the Sent folder are fine.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+  <p class="muted">Cold email is sent only from the separate sending domain, never elchemy.com. App passwords live in <code>SALESFINDER_MAILBOX_PASSWORDS</code> in .env; this page only holds each password's name.</p>
+  <p><a class="button" href="/admin/mailboxes/new">Add a mailbox</a></p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Address</th><th>Side</th><th>Enabled</th><th>Warm-up start</th><th>Cap today / max</th><th>Sent today</th><th>DNS</th><th>Hold reason</th><th>Last error</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for r in rows %}
+        {% set m = r.mailbox %}
+        <tr>
+          <td class="break"><a href="/admin/mailboxes/{{ m.id }}">{{ m.address }}</a></td>
+          <td>{{ m.side }}</td>
+          <td>{% if m.enabled %}<span class="badge badge-ok">enabled</span>{% else %}<span class="badge badge-off">disabled</span>{% endif %}</td>
+          <td class="nowrap">{{ m.warmup_started_on.isoformat() if m.warmup_started_on else "—" }}</td>
+          <td class="nowrap">{{ r.cap_today }} / {{ m.daily_max }}</td>
+          <td>{{ r.sent_today }}</td>
+          <td class="nowrap">
+            {% if r.report.checks %}
+              {% for c in r.report.checks %}<span title="{{ c.detail }}">{{ c.name|upper }} {{ "✓" if c.ok else "✗" }}</span>{% if not loop.last %} {% endif %}{% endfor %}
+              <div class="muted small">checked {{ m.dns_checked_at|utc }}{% if not fresh[m.id] %} (not fresh){% endif %}</div>
+            {% else %}<span class="muted">not checked</span>{% endif %}
+          </td>
+          <td class="break hold-reason">{{ m.hold_reason or "—" }}</td>
+          <td class="break last-error">{{ m.last_error or "—" }}</td>
+          <td class="nowrap">
+            {% for action, label in (("enable" if not m.enabled else "disable", "Enable" if not m.enabled else "Disable"), ("check-dns", "Check DNS"), ("test", "Test connection")) %}
+            <form method="post" action="/admin/mailboxes/{{ m.id }}/{{ action }}" class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+              <button type="submit" class="button button-secondary">{{ label }}</button>
+            </form>
+            {% endfor %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="10" class="muted">No mailboxes yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Mail reading</h2>
+  {% if folder_errors %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Mailbox</th><th>Folder</th><th>Error</th><th>Last good read</th><th></th></tr></thead>
+      <tbody>
+      {% for f, address in folder_errors %}
+        <tr>
+          <td class="break">{{ address }}</td>
+          <td>{{ folder_labels.get(f.folder, f.folder) }}</td>
+          <td class="break folder-error">{{ f.last_error }}</td>
+          <td class="nowrap">{{ f.polled_at|utc }}</td>
+          <td>
+            <form method="post" action="/admin/mailboxes/{{ f.mailbox_id }}/folders/{{ f.folder }}/dismiss" class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+              <input type="hidden" name="error" value="{{ f.last_error }}">
+              <button type="submit" class="button button-secondary">Dismiss</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="muted small">“Skipped a mail we couldn't read” stays until dismissed: look for that mail in the mailbox (an opt-out in it was still honoured if its sender could be read).</p>
+  {% else %}
+  <p class="muted">No mail-reading errors.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Mail we couldn't place</h2>
+  <p class="muted">Bounces we couldn't read and mails we couldn't read at all, that matched none of our emails (last {{ unplaced_days }} days). Nothing was suppressed for them: check each in the mailbox.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Read</th><th>Mailbox</th><th>What</th><th>From</th><th>Subject</th></tr></thead>
+      <tbody>
+      {% for m, address in unplaced %}
+        <tr>
+          <td class="nowrap">{{ m.created_at|utc }}</td>
+          <td class="break">{{ address }} <span class="muted small">{{ folder_labels.get(m.folder, m.folder) }}</span></td>
+          <td>{{ unplaced_labels.get(m.kind, m.kind) }}</td>
+          <td class="break mono unplaced-from">{{ m.from_address or "—" }}</td>
+          <td class="break unplaced-subject">{{ m.subject }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="muted">None.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

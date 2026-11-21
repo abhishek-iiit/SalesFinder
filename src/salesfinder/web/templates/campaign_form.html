@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}New {{ side }} campaign{% endblock %}
+{% block content %}
+<p><a href="/campaigns">← All campaigns</a></p>
+<section class="card">
+  <h1>New {{ side }} campaign</h1>
+  <nav class="tabs" aria-label="Side">
+    {% for value, label in side_labels.items() %}
+    <a href="/campaigns/new?side={{ value }}"{% if value == side %} aria-current="page"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="/campaigns/new" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+    <input type="hidden" name="side" value="{{ side }}">
+    <label>Name
+      <input type="text" name="name" value="{{ name }}" maxlength="120" required>
+    </label>
+    <label>Cohort <span class="muted">{{ side }} cohorts only</span>
+      <select name="cohort_id" required>
+        <option value="">Choose a cohort…</option>
+        {% for c in cohorts %}
+        <option value="{{ c.id }}"{% if c.id|string == cohort_id %} selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% if not cohorts %}<p class="muted">No {{ side }} cohorts yet. <a href="/cohorts/new?side={{ side }}">Create one first.</a></p>{% endif %}
+    <label>Daily draft cap <span class="muted">1–{{ max_cap }} first emails a day</span>
+      <input type="number" name="daily_draft_cap" value="{{ cap }}" min="1" max="{{ max_cap }}" step="1" required>
+    </label>
+    <p class="muted small">The campaign is created as a draft and uses the {{ side }} playbook. Activate it on its page to start drafting.</p>
+    <div class="actions">
+      <button type="submit" class="button">Create campaign</button>
+      <a href="/campaigns">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

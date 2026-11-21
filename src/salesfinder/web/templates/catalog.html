@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Catalog{% endblock %}
+{% block content %}
+{% macro mark(ok) %}{% if ok %}<span class="mark mark-yes" title="Confirmed">✓<span class="sr-only"> confirmed</span></span>{% else %}<span class="mark mark-no" title="Not confirmed">✗<span class="sr-only"> not confirmed</span></span>{% endif %}{% endmacro %}
+<section class="card">
+  <h1>Catalog</h1>
+  <p class="alert alert-info">Only confirmed facts will be used in emails. Edit config/catalog.yaml and config/facts.yaml, then restart.</p>
+  <h2>Products</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>CAS</th><th>INCI</th><th>Industries</th><th>Sides</th><th>Confirmed</th></tr></thead>
+      <tbody>
+      {% for p in products %}
+        <tr>
+          <td>{{ p.name }}{% if p.synonyms %}<div class="muted small">{{ p.synonyms|join(", ") }}</div>{% endif %}</td>
+          <td class="mono nowrap">{% for cas in p.cas %}{{ cas }}{% if not loop.last %}<br>{% endif %}{% else %}—{% endfor %}</td>
+          <td>{{ p.inci or "—" }}</td>
+          <td>{% for key in p.industries %}{{ industries[key] }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+          <td>{{ p.sides|join(", ") }}</td>
+          <td>{{ mark(p.confirmed) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Facts sheet</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Fact</th><th>Value</th><th>Confirmed</th></tr></thead>
+      <tbody>
+        <tr><td>Company name</td><td>{{ facts.company_name }}</td><td class="muted">—</td></tr>
+        <tr><td>Website</td><td class="break">{{ facts.website }}</td><td class="muted">—</td></tr>
+        <tr><td>Postal address</td><td>{{ facts.postal_address or "—" }}</td><td>{{ mark(facts.postal_address_confirmed) }}</td></tr>
+        <tr><td>Warehouses</td><td>{% for w in facts.warehouses %}{% if w.city %}{{ w.city }}, {% endif %}{{ w.state }} {{ w.country }}{% if not loop.last %}<br>{% endif %}{% else %}—{% endfor %}</td><td class="muted">—</td></tr>
+        {% for claim in facts.claims %}
+        <tr><td>Claim <span class="mono muted">{{ claim.id }}</span></td><td>{{ claim.text }}</td><td>{{ mark(claim.confirmed) }}</td></tr>
+        {% endfor %}
+        {% for side, persona in facts.personas.items() %}
+        <tr><td>{{ side|capitalize }} persona</td><td>{% if persona.name %}{{ persona.name }}{% if persona.title %}, {{ persona.title }}{% endif %}{% else %}—{% endif %}</td><td>{{ mark(persona.confirmed) }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

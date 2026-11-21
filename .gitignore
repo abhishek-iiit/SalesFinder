@@ -1,0 +1,52 @@
+# --- Secrets and local settings (never push) ---
+.env
+.env.*
+!.env.example
+config/*.local.yaml
+
+# TLS certificates and keys (mkcert files belong outside the repo; this catches strays)
+*.pem
+*.key
+*.crt
+*.p12
+
+# Database dumps and backups
+*.dump
+*.sql.gz
+*.backup
+
+# --- Python / tooling caches ---
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# --- Runtime output ---
+data/
+logs/
+*.log
+*.log.prev
+
+# --- Local tool state ---
+.code-review-graph/
+.superpowers/
+# Claude Code: keep local state out; shared settings/agents/commands may be committed
+.claude/*
+!.claude/settings.json
+!.claude/agents/
+!.claude/commands/
+
+# --- OS and editor files ---
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~

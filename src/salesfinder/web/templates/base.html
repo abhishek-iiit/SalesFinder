@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="htmx-config" content='{"includeIndicatorStyles": false}'>
+  {% if auth %}<meta name="csrf-token" content="{{ auth.csrf_token }}">{% endif %}
+  <title>{% block title %}SalesFinder{% endblock %} · SalesFinder</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/htmx.min.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">SalesFinder</a>
+    {% if auth %}
+    {% set path = request.url.path %}
+    <nav class="nav" aria-label="Main">
+      <a href="/"{% if path == "/" %} aria-current="page"{% endif %}>Today</a>
+      <a href="/discover"{% if path.startswith("/discover") %} aria-current="page"{% endif %}>Discover</a>
+      <a href="/companies"{% if path.startswith("/companies") %} aria-current="page"{% endif %}>Companies</a>
+      <a href="/signals"{% if path == "/signals" %} aria-current="page"{% endif %}>Signals</a>
+      <a href="/cohorts"{% if path.startswith("/cohorts") %} aria-current="page"{% endif %}>Cohorts</a>
+      <a href="/campaigns"{% if path.startswith("/campaigns") %} aria-current="page"{% endif %}>Campaigns</a>
+      <a href="/outbox"{% if path.startswith("/outbox") %} aria-current="page"{% endif %}>Outbox{% if auth.outbox_count %} ({{ auth.outbox_count }}){% endif %}</a>
+      <a href="/conversations"{% if path.startswith("/conversations") %} aria-current="page"{% endif %}>Conversations{% if auth.needs_you %} ({{ auth.needs_you }}){% endif %}</a>
+      <a href="/catalog"{% if path == "/catalog" %} aria-current="page"{% endif %}>Catalog</a>
+      <a href="/runs"{% if path == "/runs" %} aria-current="page"{% endif %}>Runs</a>
+      {% if auth.is_admin %}
+      <a href="/admin/users"{% if path == "/admin/users" %} aria-current="page"{% endif %}>Users</a>
+      <a href="/admin/settings"{% if path == "/admin/settings" %} aria-current="page"{% endif %}>Settings</a>
+      <a href="/admin/mailboxes"{% if path.startswith("/admin/mailboxes") %} aria-current="page"{% endif %}>Mailboxes</a>
+      <a href="/admin/do-not-contact"{% if path == "/admin/do-not-contact" %} aria-current="page"{% endif %}>Do-not-contact</a>
+      <a href="/admin/audit"{% if path == "/admin/audit" %} aria-current="page"{% endif %}>Audit log</a>
+      {% endif %}
+      <form method="post" action="/logout" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+        <button type="submit" class="link-button">Sign out</button>
+      </form>
+    </nav>
+    {% endif %}
+  </header>
+  <main class="container">
+    {% if auth and auth.sending_paused and not own_sending_banner %}
+    <p class="alert alert-warn sending-banner" role="status">Sending is paused: {{ auth.sending_paused }}</p>
+    {% endif %}
+    {% if auth and auth.worker_problem and not own_worker_banner %}
+    <p class="alert alert-error worker-banner" role="status">{{ auth.worker_problem }}</p>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{# This page shows its own sending banner. #}
+{% set own_sending_banner = true %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+{% set st = sending.state %}
+<section class="card">
+  <h1>Sending</h1>
+  {% if flash %}<p class="alert alert-success" role="status">{{ flash }}</p>{% endif %}
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  {% if st.paused %}
+  <p class="alert alert-warn sending-banner" role="status">Sending is paused: {{ st.reason }}{% if st.changed_at %} <span class="muted small">({% if sending.changed_by %}by {{ sending.changed_by }}, {% endif %}{{ st.changed_at|utc }})</span>{% endif %}</p>
+  <form method="post" action="/admin/sending/resume" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+    <input type="hidden" name="changed_at" value="{{ sending.changed_at_value }}">
+    <button type="submit" class="button">Resume sending</button>
+  </form>
+  <p class="muted small">Resuming turns real email sending on, within each mailbox's warm-up cap, office hours and DNS checks. The bounce rate starts counting again from now.</p>
+  {% else %}
+  <p class="alert alert-success sending-banner" role="status">Sending is on{% if st.changed_at %} <span class="muted small">(since {{ st.changed_at|utc }}{% if sending.changed_by %}, by {{ sending.changed_by }}{% endif %})</span>{% endif %}.</p>
+  <form method="post" action="/sending/pause" class="row-form">
+    <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+    <input type="hidden" name="back" value="/admin/settings">
+    <label>Reason <span class="muted">(optional)</span>
+      <input type="text" name="reason" maxlength="200">
+    </label>
+    <button type="submit" class="button button-danger">Pause all sending</button>
+  </form>
+  {% endif %}
+  <p class="bounce-rate">Bounce rate: {{ sending.bounces }} of last {{ sending.window }} ({{ sending.bounce_pct }}%). <span class="muted small">Sending pauses itself when more than {{ bounce_max_pct }}% of the last {{ sending.window }} sends bounce.</span></p>
+  <h2>Mailboxes</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Mailbox</th><th>Side</th><th>Sent today / cap today</th><th>Holding because</th></tr></thead>
+      <tbody>
+      {% for line in sending.mailboxes %}
+        <tr>
+          <td class="break"><a href="/admin/mailboxes/{{ line.mailbox.id }}">{{ line.mailbox.address }}</a></td>
+          <td>{{ line.mailbox.side }}</td>
+          <td class="nowrap">{{ line.sent_today }} / {{ line.cap_today }}</td>
+          <td class="break hold-reason">{{ line.hold or "—" }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="muted">No mailboxes yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p><a href="/admin/mailboxes">Mailboxes (DNS, warm-up, connection)</a> · <a href="/admin/do-not-contact">Do-not-contact and suppressions</a></p>
+</section>
+
+<section class="card">
+  <h2>Network</h2>
+  {% for warning in network.warnings %}
+  <p class="alert alert-warn network-warning" role="alert">{{ warning }}</p>
+  {% endfor %}
+  <p class="network-mode">{{ network.mode }}</p>
+  <p>Allowed hosts: {% for host in network.allowed_hosts %}<span class="mono break">{{ host }}</span>{% if not loop.last %}, {% endif %}{% else %}<span class="muted">none</span>{% endfor %}</p>
+  <p>Public URL: {% if network.public_url %}<span class="mono break">{{ network.public_url }}</span>{% else %}not set{% endif %}</p>
+  <p class="muted small">Set in the server's environment (SALESFINDER_BIND_HOST, SALESFINDER_ALLOWED_HOSTS, SALESFINDER_PUBLIC_URL); restart to apply.</p>
+</section>
+
+<section class="card">
+  <h2>Export</h2>
+  <p>Download companies as a CSV file for Excel: score, fit reasons, up to {{ export_max_contacts }} contacts each, and where outreach stands.</p>
+  <form method="post" action="/admin/export/companies" class="row-form">
+    <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+    <label>Side
+      <select name="side">
+        <option value="all">Buyers and suppliers</option>
+        <option value="buyer">Buyers</option>
+        <option value="supplier">Suppliers</option>
+      </select>
+    </label>
+    <button type="submit" class="button">Download CSV</button>
+  </form>
+  <p class="muted small">Leaves out excluded and disqualified companies, do-not-contact and HubSpot-known domains, any company with a suppressed address, and contacts whose address is excluded. Every download is recorded in the audit log.</p>
+</section>
+
+<section class="card">
+  <h2>Discovery budget</h2>
+  <p>Spent this month (UTC, including approved jobs not yet started): <strong>{{ spent | usd }}</strong> of <strong>{{ budget | usd }}</strong>.</p>
+  <form method="post" action="/admin/settings/budget" class="row-form">
+    <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+    <label>Monthly budget (USD)
+      <input type="text" name="budget" value="{{ form_budget }}" inputmode="decimal" required>
+    </label>
+    <button type="submit" class="button">Save budget</button>
+  </form>
+  <p class="muted">Whole dollars or cents, from $0 to $10,000.</p>
+</section>
+
+<section class="card">
+  <h2>HubSpot</h2>
+  {% if not hubspot_configured %}
+  <p class="alert alert-info">{{ hubspot_not_set }} Add it to the server's environment and restart to enable syncing.</p>
+  {% else %}
+  <p class="alert {% if health.state == 'failing' or health.state == 'stale' %}alert-error{% else %}alert-info{% endif %}">{{ health.message }}</p>
+  <p>Last successful sync: {{ health.last_success_at | utc }}</p>
+  <form method="post" action="/admin/hubspot/sync" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+    <button type="submit" class="button">Sync now</button>
+  </form>
+  {% endif %}
+  <h3>Recent syncs</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Requested</th><th>Status</th><th>Companies</th><th>Contacts</th><th>Error</th></tr></thead>
+      <tbody>
+      {% for s in syncs %}
+        <tr>
+          <td class="nowrap">{{ s.created_at | utc }}</td>
+          <td>{{ s.status }}</td>
+          <td>{{ s.companies_count }}</td>
+          <td>{{ s.contacts_count }}</td>
+          <td class="break">{{ s.error or "" }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="muted">No syncs yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

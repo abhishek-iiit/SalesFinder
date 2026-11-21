@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{# This page shows the worker's health itself. #}
+{% set own_worker_banner = true %}
+{% block title %}Runs{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Runs</h1>
+  <p class="muted">The background worker's log. Each row covers one heartbeat window of passes.</p>
+  {% include "_worker_status.html" %}
+  <dl class="stats runs-summary">
+    <div><dt>Claude calls today</dt><dd>{{ calls }} / {{ call_budget }}</dd></div>
+    <div><dt>Discovery spend this month</dt><dd>{{ spent|usd }} / {{ budget|usd }}</dd></div>
+  </dl>
+  <p class="failures-24h">Failures in the last 24 h: {{ failures_24h }}</p>
+  {% if recent_failures %}
+  <h2>Latest failures</h2>
+  <ul class="reasons recent-failures">
+    {% for at, text in recent_failures %}
+    <li><span class="nowrap muted small">{{ at|utc }}</span> <span class="break">{{ text }}</span></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <p class="muted small">Claude calls are counted for the current UTC day; discovery spend for the current UTC month.</p>
+</section>
+
+<section class="card">
+  <h2>Log</h2>
+  <div class="table-wrap">
+    <table class="runs">
+      <thead>
+        <tr><th>Window</th><th>End</th><th class="num">Passes</th><th class="num">Failed steps</th><th>Claude</th><th>Lines</th></tr>
+      </thead>
+      <tbody>
+      {% for r in rows %}
+        {% set run = r.run %}
+        <tr>
+          <td class="nowrap">{{ run.started_at|utc }} → {% if run.finished_at %}{{ run.finished_at|utc }}{% else %}running{% endif %}</td>
+          <td>{% if r.badge %}<span class="badge {{ r.badge }}">{{ r.label }}</span>{% else %}{{ r.label }}{% endif %}{% if run.quiet %} <span class="badge badge-warn">Quiet hours</span>{% endif %}</td>
+          <td class="num">{{ run.passes }}</td>
+          <td class="num">{% if run.failed_steps %}<span class="warn">{{ run.failed_steps }}</span>{% else %}0{% endif %}</td>
+          <td class="nowrap">{{ r.calls }} call{{ "" if r.calls == 1 else "s" }} · {{ r.cost|usd }}</td>
+          <td class="break">
+            {% if r.lines or run.lines_dropped %}
+            <details>
+              <summary>{{ r.lines|length }} line{{ "" if r.lines|length == 1 else "s" }}</summary>
+              <ul class="reasons run-lines">
+                {% for line in r.lines %}
+                <li><span class="mono small muted">{{ line.at.strftime("%H:%M:%S") if line.at else "" }}</span> {{ line.text }}</li>
+                {% endfor %}
+              </ul>
+              {% if run.lines_dropped %}<p class="muted small">+{{ run.lines_dropped }} more lines</p>{% endif %}
+            </details>
+            {% else %}<span class="muted">—</span>{% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="muted">No runs here.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% if prev_url or next_url %}
+<nav class="pager" aria-label="Pages">
+  {% if prev_url %}<a href="{{ prev_url }}" rel="prev">← Newer</a>{% else %}<span></span>{% endif %}
+  {% if next_url %}<a href="{{ next_url }}" rel="next">Older →</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

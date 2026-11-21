@@ -1,0 +1,58 @@
+Delivered-To: sales@send-domain.com
+Received: by 2002:a05:6a00:1234:b0:1:2:3:4 with SMTP id abc123csp1234;
+        Tue, 10 Nov 2026 09:15:02 -0800 (PST)
+Return-Path: <>
+From: Mail Delivery Subsystem <mailer-daemon@googlemail.com>
+To: sales@send-domain.com
+Subject: Delivery Status Notification (Failure)
+Message-ID: <dsn-0001@mail.example.com>
+Date: Tue, 10 Nov 2026 09:15:01 -0800 (PST)
+Auto-Submitted: auto-replied
+MIME-Version: 1.0
+Content-Type: multipart/report; boundary="000000000000aa11bb22"; report-type=delivery-status
+
+--000000000000aa11bb22
+Content-Type: multipart/related; boundary="000000000000aa11bb23"
+
+--000000000000aa11bb23
+Content-Type: multipart/alternative; boundary="000000000000aa11bb24"
+
+--000000000000aa11bb24
+Content-Type: text/plain; charset="UTF-8"
+
+** Address not found **
+
+Your message wasn't delivered to jane.doe@acme-soap.com because the address couldn't be found, or is unable to receive mail.
+
+The response from the remote server was:
+550 5.1.1 The email account that you tried to reach does not exist.
+
+--000000000000aa11bb24--
+--000000000000aa11bb23--
+
+--000000000000aa11bb22
+Content-Type: message/delivery-status
+
+Reporting-MTA: dns; googlemail.com
+Received-From-MTA: dns; send-domain.com
+Arrival-Date: Tue, 10 Nov 2026 09:15:00 -0800 (PST)
+
+Final-Recipient: rfc822; jane.doe@acme-soap.com
+Action: failed
+Status: 5.1.1
+Remote-MTA: dns; mx.acme-soap.com
+Diagnostic-Code: smtp; 550 5.1.1 The email account that you tried to reach does not exist.
+Last-Attempt-Date: Tue, 10 Nov 2026 09:15:01 -0800 (PST)
+
+--000000000000aa11bb22
+Content-Type: message/rfc822
+
+Received: by 10.0.0.1 with SMTP id x1;
+        Tue, 10 Nov 2026 09:15:00 -0800 (PST)
+From: Jordan Rivera <sales@send-domain.com>
+To: jane.doe@acme-soap.com
+Subject: Sourcing glycerin for your soap line
+Message-ID: <20261110.4242.ours1@send-domain.com>
+Date: Tue, 10 Nov 2026 09:14:58 -0800
+
+--000000000000aa11bb22--

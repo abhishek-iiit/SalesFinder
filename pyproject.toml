@@ -1,0 +1,69 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "salesfinder"
+version = "0.1.0"
+description = "Elchemy outreach app"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.12",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30",
+    "alembic>=1.14",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "email-validator>=2.2",
+    "typer>=0.12",
+    "structlog>=24.4",
+    "httpx>=0.27",
+    "argon2-cffi>=23.1",
+    "pyyaml>=6.0.2",
+    "tldextract>=5.1",
+    "selectolax>=0.3.21",
+    "dnspython>=2.6",
+    "aiosmtplib>=5.1.3",
+]
+
+[project.scripts]
+salesfinder = "salesfinder.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=1.0",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "pre-commit>=4.0",
+    "types-PyYAML",
+    "aiosmtpd>=1.4.6",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/salesfinder"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+extend-exclude = ["docs", ".superpowers"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "S", "ASYNC", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.mypy]
+strict = true
+plugins = ["pydantic.mypy"]
+mypy_path = "src"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]

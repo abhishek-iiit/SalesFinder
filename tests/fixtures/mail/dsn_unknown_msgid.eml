@@ -1,0 +1,33 @@
+From: Mail Delivery Subsystem <mailer-daemon@mail.example.com>
+To: sales@send-domain.com
+Subject: Undelivered Mail Returned to Sender
+Message-ID: <dsn-0004@mail.example.com>
+Date: Wed, 11 Nov 2026 09:30:00 +0000
+Auto-Submitted: auto-replied
+MIME-Version: 1.0
+Content-Type: multipart/report; report-type=delivery-status; boundary="bnd-unk"
+
+--bnd-unk
+Content-Type: text/plain; charset=utf-8
+
+The mail system could not deliver your message to <jane.doe@acme-soap.com>.
+
+--bnd-unk
+Content-Type: message/delivery-status
+
+Reporting-MTA: dns; mail.example.com
+
+Final-Recipient: rfc822; jane.doe@acme-soap.com
+Action: failed
+Status: 5.1.1
+Diagnostic-Code: smtp; 550 5.1.1 User unknown
+
+--bnd-unk
+Content-Type: text/rfc822-headers
+
+From: Someone Else <someone@other-domain.example>
+To: jane.doe@acme-soap.com
+Subject: Forwarded note
+Message-ID: <not-ours-9999@other-domain.example>
+
+--bnd-unk--

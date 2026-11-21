@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{# This page shows its own sending banner, and the worker banner in its Worker card. #}
+{% set own_sending_banner = true %}
+{% set own_worker_banner = true %}
+{% block title %}Today{% endblock %}
+{% block content %}
+{% set st = sending.state %}
+<section class="card">
+  <h1>Today</h1>
+  {% if flash %}<p class="alert alert-success" role="status">{{ flash }}</p>{% endif %}
+  {% if st.paused %}
+  <p class="alert alert-warn sending-banner" role="status">Sending is paused: {{ st.reason }}{% if sending.changed_by %} <span class="muted small">(by {{ sending.changed_by }}, {{ st.changed_at|utc }})</span>{% endif %}</p>
+  {% if auth.is_admin %}<p class="small"><a href="/admin/settings">Resume sending in Settings</a></p>{% endif %}
+  {% else %}
+  <p class="alert alert-success sending-banner" role="status">Sending is on.</p>
+  <form method="post" action="/sending/pause" class="row-form">
+    <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+    <input type="hidden" name="back" value="/">
+    <label>Reason <span class="muted">(optional)</span>
+      <input type="text" name="reason" maxlength="200">
+    </label>
+    <button type="submit" class="button button-danger">Pause all sending</button>
+  </form>
+  <p class="muted small">An emergency stop: anyone can pause; only an admin can resume.</p>
+  {% endif %}
+  <p>Signed in as {{ auth.user.name }} <span class="muted">({{ auth.user.email }}, {{ auth.user.role }})</span></p>
+  <dl class="stats today-stats">
+    <div><dt>Ready to approve</dt><dd>{{ ready }}</dd></div>
+    <div><dt>Held by the gate</dt><dd>{{ held }}</dd></div>
+    <div><dt>Follow-ups due for review</dt><dd>{{ followups_due }}</dd></div>
+    <div><dt>Approved, waiting to send</dt><dd><a href="/outbox?view=approved">{{ approved }}</a></dd></div>
+    <div><dt>Replies (last 24 h)</dt><dd>{{ replies_24h }}</dd></div>
+    <div><dt>Drafted today</dt><dd>{{ drafted }}</dd></div>
+    <div><dt>Claude calls today</dt><dd>{{ calls }} / {{ call_budget }}</dd></div>
+  </dl>
+  <div class="actions">
+    <a class="button" href="/outbox">Open the Outbox</a>
+    <a class="button button-secondary" href="/conversations">Conversations</a>
+    <a class="button button-secondary" href="/campaigns">Campaigns</a>
+  </div>
+  <p class="muted small">Counts are for the current UTC day.</p>
+</section>
+
+<section class="card worker-card">
+  <h2>Worker</h2>
+  {% include "_worker_status.html" %}
+  <p class="failures-24h">Failures in the last 24 h: {{ failures_24h }}</p>
+  {% if recent_failures %}
+  <ul class="reasons recent-failures">
+    {% for at, text in recent_failures %}
+    <li><span class="nowrap muted small">{{ at|utc }}</span> <span class="break">{{ text }}</span></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <p class="small"><a href="/runs">See the runs log</a></p>
+</section>
+
+<section class="card">
+  <h2>Needs you</h2>
+  <p><a href="/conversations?view=mine">Mine: {{ needs_mine }}</a> · <a href="/conversations?view=needs_you">All: {{ needs_all }}</a> <span class="muted small">(mine: assigned to you and still open or needing you; all: every conversation that needs someone)</span></p>
+  {% if needs_you %}
+  <ul class="reasons needs-you-list">
+    {% for r in needs_you %}
+    <li><a href="/conversations/{{ r.conversation.id }}" class="break">{{ r.company.name }}</a>{% if r.conversation.needs_you_reason %}: <span class="break">{{ r.conversation.needs_you_reason }}</span>{% endif %} <span class="muted small">· {{ r.assigned_name or "unassigned" }} · {{ r.conversation.last_inbound_at|utc }}</span></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">Nothing needs you right now.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Sending</h2>
+  {% for address in not_read %}
+  <p class="alert alert-error not-read break" role="status">Not reading {{ address }}: its connection hasn't passed a test, so replies and opt-outs there wait unread. An admin should press Test connection on the Mailboxes page.</p>
+  {% endfor %}
+  {% if unconfirmed or failed %}
+  <p class="alert alert-error send-problems" role="status"><a href="/outbox?view=problems">{{ unconfirmed }} not confirmed, {{ failed }} failed</a>: a teammate should check them.</p>
+  {% endif %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Mailbox</th><th>Sent today / cap today</th><th>Holding because</th></tr></thead>
+      <tbody>
+      {% for line in sending.mailboxes %}
+        <tr>
+          <td class="break">{{ line.mailbox.address }} <span class="muted small">{{ line.mailbox.side }}</span></td>
+          <td class="nowrap">{{ line.sent_today }} / {{ line.cap_today }}</td>
+          <td class="break hold-reason">{{ line.hold or "—" }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="3" class="muted">No mailboxes yet{% if auth.is_admin %} — <a href="/admin/mailboxes">add one</a>{% endif %}.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if mail_errors %}
+  <h3>Mail reading</h3>
+  <ul class="reasons mail-errors">
+    {% for address, folder, error in mail_errors %}
+    <li><span class="break">{{ address }}</span> ({{ "INBOX" if folder == "inbox" else "Sent" }}): <span class="break last-error">{{ error }}</span></li>
+    {% endfor %}
+  </ul>
+  {% if auth.is_admin %}<p class="small"><a href="/admin/mailboxes">See the Mailboxes page</a></p>{% endif %}
+  {% endif %}
+</section>
+{% if errors %}
+<section class="card">
+  <h2>Writing errors</h2>
+  <ul class="reasons">
+    {% for s in errors %}
+    <li><a href="/campaigns/{{ s.campaign.id }}" class="break">{{ s.campaign.name }}</a>: <span class="break last-error">{{ s.campaign.last_error }}</span></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

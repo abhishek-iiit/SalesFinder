@@ -1,0 +1,17 @@
+Return-Path: <>
+From: Mail Delivery Subsystem <MAILER-DAEMON@mail.example.com>
+To: sales@send-domain.com
+Subject: Undeliverable: Sourcing glycerin for your soap line
+Message-ID: <bounce-0002@mail.example.com>
+Date: Tue, 10 Nov 2026 10:02:11 +0000
+MIME-Version: 1.0
+Content-Type: text/plain; charset="UTF-8"
+
+This is the mail system at host mail.example.com.
+
+I'm sorry to have to inform you that your message could not be delivered to one or more recipients.
+
+<jane.doe@acme-soap.com>: host mx.acme-soap.com said: 550 5.1.1 <jane.doe@acme-soap.com>: Recipient address rejected: User unknown in virtual mailbox table
+
+Original-Message-ID header of the returned message:
+Message-ID: <20261110.4243.ours2@send-domain.com>

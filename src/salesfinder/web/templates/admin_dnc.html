@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Do-not-contact{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Do-not-contact</h1>
+  {% if flash %}<p class="alert alert-success" role="status">{{ flash }}</p>{% endif %}
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="/admin/do-not-contact" class="row-form">
+    <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+    <label>Email or domain
+      <input type="text" name="entry" value="{{ form_entry }}" required>
+    </label>
+    <label>Reason
+      <input type="text" name="reason" value="{{ form_reason }}" maxlength="200" required>
+    </label>
+    <button type="submit" class="button">Add</button>
+  </form>
+  <p class="muted">Adding a domain blocks every address and subdomain at it. Companies already found at that domain and not yet worked are marked excluded. Removing an entry does not bring excluded companies back.</p>
+</section>
+
+<section class="card">
+  <h2>Entries</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Value</th><th>Kind</th><th>Reason</th><th>Added by</th><th>Added</th><th></th></tr></thead>
+      <tbody>
+      {% for e in entries %}
+        <tr>
+          <td class="mono break">{{ e.value }}</td>
+          <td>{{ e.kind }}</td>
+          <td class="break">{{ e.reason }}</td>
+          <td>{{ adders.get(e.added_by_id, "—") }}</td>
+          <td class="nowrap">{{ e.created_at | utc }}</td>
+          <td>
+            <form method="post" action="/admin/do-not-contact/{{ e.id }}/remove" class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+              <button type="submit" class="button button-danger">Remove</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="muted">Nothing on the list.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card" id="suppressions">
+  <h2>Suppressions</h2>
+  <p class="muted">Addresses we never email again: people who unsubscribed, addresses that bounced, and ones a teammate suppressed. Unsubscribes are permanent. A bounced or manual entry can be removed (for example, a mailbox that works again).</p>
+  {% if suppressions_total > suppressions | length %}<p class="muted">Showing the newest {{ suppressions | length }} of {{ suppressions_total }}.</p>{% endif %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Address</th><th>Reason</th><th>Detail</th><th>Added by</th><th>Added</th><th></th></tr></thead>
+      <tbody>
+      {% for s in suppressions %}
+        <tr>
+          <td class="mono break">{{ s.address }}</td>
+          <td>{{ s.reason }}</td>
+          <td class="break">{{ s.detail }}</td>
+          <td>{{ adders.get(s.created_by_id, "—") }}</td>
+          <td class="nowrap">{{ s.created_at | utc }}</td>
+          <td>
+            {% if s.reason != "unsubscribed" %}
+            <form method="post" action="/admin/suppressions/{{ s.id }}/remove" class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+              <button type="submit" class="button button-danger">Remove</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="muted">No suppressed addresses.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Edit email{% endblock %}
+{% block content %}
+<p><a href="{{ list_url }}">← Outbox</a></p>
+<section class="card">
+  <h1>Edit email</h1>
+  {% if flash %}<p class="alert alert-success" role="status">{{ flash }}</p>{% endif %}
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  <dl class="facts">
+    <dt>Campaign</dt><dd><a href="/campaigns/{{ campaign.id }}" class="break">{{ campaign.name }}</a></dd>
+    <dt>Company</dt><dd><a href="/companies/{{ company.id }}" class="break">{{ company.name }}</a></dd>
+    <dt>To</dt><dd class="break">{% if person %}{{ person.full_name }}{% if person.title %}, {{ person.title }}{% endif %} · {% endif %}<span class="mono">{{ sequence.recipient }}</span></dd>
+    <dt>Kind</dt><dd>{{ kind_labels.get(message.kind, message.kind) }}</dd>
+    <dt>Status</dt><dd>{{ status_labels.get(message.status, message.status) }}{% if message.edited %} <span class="badge badge-warn">Edited</span>{% endif %}</dd>
+  </dl>
+  {% if message.status == "gate_failed" and message.gate_errors %}
+  <div class="alert alert-error gate-problems" role="status">
+    <p>Held by the gate:</p>
+    <ul class="reasons">{% for problem in message.gate_errors %}<li>{{ problem }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+  {% if editable %}
+  <form method="post" action="/outbox/{{ message.id }}" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+    <input type="hidden" name="version" value="{{ version }}">
+    {% for key, value in back.items() %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+    <label>Subject
+      <input type="text" name="subject" value="{{ subject }}" maxlength="200" required>
+    </label>
+    <label>Email <span class="muted">without the signature and footer: they are added automatically</span>
+      <textarea name="body" rows="14" required>{{ body }}</textarea>
+    </label>
+    <div class="added-automatically">
+      <p class="muted small">Added automatically (not editable):</p>
+      <pre class="email-body muted">{{ tail }}</pre>
+    </div>
+    <p class="muted small">Saving re-runs the gate. A clean email goes back to <em>Ready</em> for approval; it is never approved by saving.</p>
+    <div class="actions">
+      <button type="submit" class="button">Save</button>
+      <a href="{{ list_url }}">Cancel</a>
+    </div>
+  </form>
+  {% else %}
+  <p class="alert alert-info" role="status">This email can't be edited any more.</p>
+  <dl class="facts"><dt>Subject</dt><dd class="break">{{ message.subject }}</dd></dl>
+  <pre class="email-body">{{ message.body }}</pre>
+  {% endif %}
+</section>
+{% endblock %}

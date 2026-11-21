@@ -1,0 +1,38 @@
+<div id="job-status" class="job-status"{% if polling %} hx-get="/discover/jobs/{{ job.id }}/status" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
+  <p>Status: <strong class="status status-{{ job.status }}">{{ status_label }}</strong></p>
+  {% if job.status == "estimated" %}
+  <div class="actions">
+    <form method="post" action="/discover/jobs/{{ job.id }}/approve" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+      <button type="submit" class="button">Run — spend about {{ job.estimated_cost_usd|usd(4) }}</button>
+    </form>
+    <form method="post" action="/discover/jobs/{{ job.id }}/cancel" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+      <button type="submit" class="button button-secondary">Cancel</button>
+    </form>
+  </div>
+  {% elif job.status == "approved" %}
+  <p class="muted">The worker will pick it up shortly. This updates by itself.</p>
+  <form method="post" action="/discover/jobs/{{ job.id }}/cancel" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{ auth.csrf_token }}">
+    <button type="submit" class="button button-secondary">Cancel</button>
+  </form>
+  {% elif job.status == "cancelled" %}
+  <p class="muted">Cancelled {{ job.finished_at|utc }}. Nothing was searched.</p>
+  {% else %}
+  {% if job.status == "running" %}<p class="muted">Searching. This updates by itself.</p>{% endif %}
+  <dl class="stats">
+    <div><dt>Searches done</dt><dd>{{ job.searches_done }} of {{ job.estimated_searches }}</dd></div>
+    <div><dt>Spent</dt><dd>{{ job.actual_cost_usd|usd(4) }}</dd></div>
+    <div><dt>Results seen</dt><dd>{{ job.results_seen }}</dd></div>
+    <div><dt>New companies</dt><dd>{{ job.companies_new }}</dd></div>
+    <div><dt>Already known</dt><dd>{{ job.companies_existing }}</dd></div>
+    <div><dt>Excluded</dt><dd>{{ job.companies_excluded }}</dd></div>
+    <div><dt>Dropped (junk)</dt><dd>{{ job.results_dropped }}</dd></div>
+  </dl>
+  {% if job.error %}<p class="alert alert-error" role="alert">{{ job.error }}</p>{% endif %}
+  {% if job.status != "running" %}
+  <p>Finished {{ job.finished_at|utc }}. <a href="/companies?side={{ job.side }}&amp;job={{ job.id }}">See the companies this job found</a></p>
+  {% endif %}
+  {% endif %}
+</div>
