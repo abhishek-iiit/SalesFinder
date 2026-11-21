@@ -6,6 +6,13 @@ SalesFinder is Elchemy's internal outreach app: a small web dashboard (FastAPI +
 - [docs/architecture.md](docs/architecture.md): processes, data flow, the worker's pass, modules, safety rails, lock order and where state lives.
 - The [design spec](docs/superpowers/specs/2026-11-07-elchemy-salesfinder-design.md).
 
+<p align="center">
+  <a href="https://youtube.com">
+    <img src="https://www.youtube.com/watch?v=Ls9ZOLlGuic" alt="Video Title" width="600">
+  </a>
+</p>
+
+
 ## Prerequisites
 
 - Python 3.13 and [uv](https://docs.astral.sh/uv/)
